@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --kobe-purple: #552583;
+  --kobe-gold: #FDB927;
+  --lebron-wine: #860038;
+  --lebron-gold: #FDBB30;
+  --laker-purple: #552583;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-kobe-purple: var(--kobe-purple);
+  --color-kobe-gold: var(--kobe-gold);
+  --color-lebron-wine: var(--lebron-wine);
+  --color-lebron-gold: var(--lebron-gold);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(253, 185, 39, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(253, 185, 39, 0.6); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vs-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
