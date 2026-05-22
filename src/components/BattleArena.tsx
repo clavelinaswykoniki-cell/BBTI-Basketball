@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useGame } from "./GameProvider";
+import { statBombs } from "@/data/personas";
 
 export default function BattleArena() {
   const { currentTopic, currentRound, totalRounds, vote, nextRound, kobeScore, lebronScore, side } =
@@ -14,16 +15,20 @@ export default function BattleArena() {
     setAnimKey((k) => k + 1);
   }, [currentRound]);
 
+  const statBomb = useMemo(() => {
+    if (!voted || !currentTopic) return null;
+    const bombs = statBombs[currentTopic.id];
+    if (!bombs) return null;
+    const opposing = bombs.find((b) => b.side !== voted);
+    return opposing || bombs[0];
+  }, [voted, currentTopic]);
+
   if (!currentTopic) return null;
 
   const handleVote = (winner: "kobe" | "lebron") => {
     if (voted) return;
     setVoted(winner);
     vote(winner);
-  };
-
-  const handleNext = () => {
-    nextRound();
   };
 
   return (
@@ -62,7 +67,7 @@ export default function BattleArena() {
       </div>
 
       {/* Debate cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {/* Kobe card */}
         <div
           className={`rounded-2xl p-5 sm:p-6 border-2 transition-all duration-300 cursor-pointer
@@ -138,11 +143,29 @@ export default function BattleArena() {
         </div>
       </div>
 
+      {/* Stat bomb reveal after voting */}
+      {voted && statBomb && (
+        <div
+          className="mt-6 mx-auto w-full max-w-2xl rounded-xl bg-gradient-to-r from-yellow-900/20 to-red-900/20 border border-yellow-500/30 p-4 text-center"
+          style={{ animation: "fade-up 0.4s ease-out" }}
+        >
+          <div className="text-xs text-yellow-400/80 font-bold mb-2">
+            💣 一个数据终结争论
+          </div>
+          <p className="text-white/90 text-sm sm:text-base font-semibold mb-1">
+            {statBomb.stat}
+          </p>
+          <p className="text-white/40 text-xs">
+            来源：{statBomb.source} · 偏向{statBomb.side === "kobe" ? "科比" : "詹姆斯"}
+          </p>
+        </div>
+      )}
+
       {/* Next button */}
       {voted && (
-        <div className="flex justify-center mt-8" style={{ animation: "fade-up 0.3s ease-out" }}>
+        <div className="flex justify-center mt-6" style={{ animation: "fade-up 0.5s ease-out" }}>
           <button
-            onClick={handleNext}
+            onClick={nextRound}
             className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full
               transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
           >
