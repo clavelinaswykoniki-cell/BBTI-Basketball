@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { debates, type DebateTopic } from "@/data/debates";
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
+import { debates, bonusDebates, type DebateTopic } from "@/data/debates";
 
 type Side = "kobe" | "lebron";
+
+type Phase = "landing" | "pick" | "battle" | "bonus-intro" | "bonus" | "result";
 
 interface Vote {
   topicId: string;
@@ -11,7 +13,7 @@ interface Vote {
 }
 
 interface GameState {
-  phase: "landing" | "pick" | "battle" | "result";
+  phase: Phase;
   side: Side | null;
   currentRound: number;
   votes: Vote[];
@@ -26,7 +28,11 @@ interface GameContextType extends GameState {
   restart: () => void;
   currentTopic: DebateTopic | null;
   totalRounds: number;
+  mainRounds: number;
+  isBonus: boolean;
   startGame: () => void;
+  startBonus: () => void;
+  skipToResult: () => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -36,6 +42,8 @@ export function useGame() {
   if (!ctx) throw new Error("useGame must be inside GameProvider");
   return ctx;
 }
+
+const allTopics = [...debates, ...bonusDebates];
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GameState>({
@@ -56,22 +64,38 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const vote = useCallback((winner: Side) => {
-    setState((s) => ({
-      ...s,
-      votes: [...s.votes, { topicId: debates[s.currentRound].id, winner }],
-      kobeScore: s.kobeScore + (winner === "kobe" ? 1 : 0),
-      lebronScore: s.lebronScore + (winner === "lebron" ? 1 : 0),
-    }));
+    setState((s) => {
+      const topic = s.phase === "bonus"
+        ? bonusDebates[s.currentRound - debates.length]
+        : debates[s.currentRound];
+      return {
+        ...s,
+        votes: [...s.votes, { topicId: topic.id, winner }],
+        kobeScore: s.kobeScore + (winner === "kobe" ? 1 : 0),
+        lebronScore: s.lebronScore + (winner === "lebron" ? 1 : 0),
+      };
+    });
   }, []);
 
   const nextRound = useCallback(() => {
     setState((s) => {
       const next = s.currentRound + 1;
-      if (next >= debates.length) {
+      if (s.phase === "battle" && next >= debates.length) {
+        return { ...s, phase: "bonus-intro" };
+      }
+      if (s.phase === "bonus" && next >= allTopics.length) {
         return { ...s, phase: "result" };
       }
       return { ...s, currentRound: next };
     });
+  }, []);
+
+  const startBonus = useCallback(() => {
+    setState((s) => ({ ...s, phase: "bonus", currentRound: debates.length }));
+  }, []);
+
+  const skipToResult = useCallback(() => {
+    setState((s) => ({ ...s, phase: "result" }));
   }, []);
 
   const restart = useCallback(() => {
@@ -85,8 +109,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const currentTopic =
-    state.phase === "battle" ? debates[state.currentRound] : null;
+  const currentTopic = useMemo(() => {
+    if (state.phase === "battle") return debates[state.currentRound] ?? null;
+    if (state.phase === "bonus") return allTopics[state.currentRound] ?? null;
+    return null;
+  }, [state.phase, state.currentRound]);
+
+  const isBonus = state.phase === "bonus";
+  const totalRounds = state.phase === "bonus" ? allTopics.length : debates.length;
 
   return (
     <GameContext.Provider
@@ -97,8 +127,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         nextRound,
         restart,
         currentTopic,
-        totalRounds: debates.length,
+        totalRounds,
+        mainRounds: debates.length,
+        isBonus,
         startGame,
+        startBonus,
+        skipToResult,
       }}
     >
       {children}

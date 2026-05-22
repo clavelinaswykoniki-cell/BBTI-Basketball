@@ -5,7 +5,7 @@ import { useGame } from "./GameProvider";
 import { statBombs } from "@/data/personas";
 
 export default function BattleArena() {
-  const { currentTopic, currentRound, totalRounds, vote, nextRound, kobeScore, lebronScore, side } =
+  const { currentTopic, currentRound, totalRounds, mainRounds, isBonus, vote, nextRound, kobeScore, lebronScore, side } =
     useGame();
   const [voted, setVoted] = useState<"kobe" | "lebron" | null>(null);
   const [animKey, setAnimKey] = useState(0);
@@ -41,8 +41,9 @@ export default function BattleArena() {
         </div>
         <div className="text-center">
           <span className="text-white/50 text-sm">
-            Round {currentRound + 1}/{totalRounds}
+            {isBonus ? `Bonus ${currentRound - mainRounds + 1}/3` : `Round ${currentRound + 1}/${mainRounds}`}
           </span>
+          {isBonus && <span className="block text-yellow-400/60 text-xs">🔮 假设题</span>}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-white/30 text-sm">詹姆斯</span>
@@ -169,7 +170,9 @@ export default function BattleArena() {
             className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full
               transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
           >
-            {currentRound + 1 < totalRounds ? "下一轮 →" : "查看结果 🏆"}
+            {isBonus
+              ? (currentRound + 1 < totalRounds ? "下一题 →" : "查看最终结果 🏆")
+              : (currentRound + 1 < mainRounds ? "下一轮 →" : "进入彩蛋轮 🔮")}
           </button>
         </div>
       )}

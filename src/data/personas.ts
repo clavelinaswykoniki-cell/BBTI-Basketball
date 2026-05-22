@@ -160,4 +160,16 @@ export const statBombs: Record<string, StatBomb[]> = {
     { stat: "科比2007年也要求过交易——差点去了公牛。「一人一城」的叙事有裂缝。", source: "ESPN 2007报道", side: "lebron" },
     { stat: "詹姆斯4支球队，每离开一次球迷就烧一次球衣——忠诚这个词跟他无关。", source: "NBA历史", side: "kobe" },
   ],
+  whatif_swap: [
+    { stat: "科比2007年逼宫要走时，湖人差点把他换到公牛——所谓忠诚不过是管理层没同意。", source: "ESPN Trade Machine", side: "lebron" },
+    { stat: "詹姆斯去热火前骑士连续3年东部前二——他走后直接联盟垫底。说明队伍本来不差。", source: "NBA战绩", side: "kobe" },
+  ],
+  whatif_era: [
+    { stat: "00年代的pace（回合数）比现在低15%——科比在快节奏时代得分会更夸张。", source: "Basketball Reference Pace", side: "kobe" },
+    { stat: "手检时代外线球员效率普遍低5%——科比的很多效率数据有时代折扣。", source: "Thinking Basketball", side: "lebron" },
+  ],
+  whatif_1v1: [
+    { stat: "科比生涯单打每回合0.93分——联盟平均是0.86。强，但没有碾压。", source: "NBA Tracking", side: "lebron" },
+    { stat: "詹姆斯生涯被单防时命中率比科比低4%——去掉挡拆和空切，他没那么无解。", source: "Synergy Sports", side: "kobe" },
+  ],
 };
