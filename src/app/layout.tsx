@@ -1,24 +1,33 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const geistSans = Geist({
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: "100 900",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0a0a0a",
+};
 
 export const metadata: Metadata = {
-  title: "GOAT Debate | Kobe vs LeBron",
+  title: "BBTI | 篮球人格测试",
   description:
-    "科比 vs 詹姆斯——12 个最热争议话题，选边站，逐轮 PK，你来决定谁是 GOAT。",
+    "12 道灵魂拷问，揭示你的篮球人格类型。选科比还是詹姆斯？你的每个选择都在暴露你的真实性格。",
   openGraph: {
-    title: "GOAT Debate | Kobe vs LeBron",
-    description: "12 个最热争议话题，选边站 PK，谁才是真正的 GOAT？",
+    title: "BBTI | 篮球人格测试",
+    description: "12 道灵魂拷问，揭示你的篮球人格类型。选科比还是詹姆斯？你的每个选择都在暴露你的真实性格。",
     type: "website",
   },
 };

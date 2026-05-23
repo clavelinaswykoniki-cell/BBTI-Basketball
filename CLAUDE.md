@@ -6,12 +6,17 @@
 Interactive debate website: Kobe vs LeBron, pick-a-side PK format.
 Deploy target: Railway (web, not WeChat miniprogram).
 
-## Current State (v0.2)
+## Current State (v0.3)
 - 12 main debate topics + 3 bonus "What If" hypothetical rounds
 - Full game flow: Landing → Pick Side → 12-round Battle → Bonus Intro → 3 Bonus → Result
-- Persona system: assigns trash-talk label based on voting pattern
-- Personalized roast: calls out contradictions in votes
+- Persona system: 12+ personas based on voting patterns (speed-runner, traitor, split personality, etc.)
+- Personalized roast: 14+ patterns calling out contradictions in votes
 - Stat bomb reveals: cherry-picked provocative stats after each vote
+- AI Judge: template-based verdict engine analyzing voting patterns (/api/judge)
+- Global vote counter: localStorage-based with seeded baseline data (~2000-5000 per topic)
+- Vote reveal: animated bar chart showing "global" vote split after each round
+- Global war banner: Kobe army vs LeBron army percentage at top of battle arena
+- Speed-runner detection: roasts users who finish too fast (<90s)
 - Share text includes persona + roast for viral screenshots
 - Production build passes, dev server at localhost:3000
 
@@ -28,20 +33,26 @@ npm run build    # production build
 ```
 
 ## File Structure
-- `src/data/debates.ts` — 12 main + 3 bonus debate topics (both perspectives)
-- `src/data/personas.ts` — persona logic, roast generator, stat bombs
-- `src/components/GameProvider.tsx` — game state (Context + hooks)
+- `src/data/debates.ts` — 12 main + 3 bonus debate topics (both perspectives, 虎扑 trash-talk style)
+- `src/data/personas.ts` — 12+ persona types, 14+ roast patterns, stat bombs per topic
+- `src/lib/voteStats.ts` — localStorage vote counter with seeded baseline data
+- `src/components/GameProvider.tsx` — game state (Context + hooks, tracks elapsed time)
 - `src/components/Landing.tsx` — hero landing page
 - `src/components/PickSide.tsx` — side selection
-- `src/components/BattleArena.tsx` — debate voting + stat bomb reveal
+- `src/components/BattleArena.tsx` — debate voting + stat bomb + vote reveal + global war
 - `src/components/BonusIntro.tsx` — transition screen after 12 main rounds
-- `src/components/Result.tsx` — persona + roast + score + vote breakdown
+- `src/components/Result.tsx` — persona + roast + AI judge + score + vote breakdown
+- `src/components/AiJudge.tsx` — AI verdict card with confidence bar
+- `src/components/VoteReveal.tsx` — animated vote split bar chart per topic
+- `src/components/GlobalWar.tsx` — Kobe vs LeBron army percentage banner
+- `src/app/api/judge/route.ts` — POST endpoint for AI verdict generation
 
-## Phase 2 (planned, needs backend)
-1. AI Judge via DeepSeek API (server route + rate limiting)
-2. Live global vote counter (Upstash Redis + SSE)
+## Phase 2 (planned enhancements)
+1. AI Judge → real DeepSeek API (currently template-based, swap to LLM for richer verdicts)
+2. Live global vote counter → Upstash Redis + SSE (currently localStorage fake data)
 3. Radar chart data visualization (recharts)
 4. OG image generation for share cards (next/og)
+5. Railway deployment
 
 ## Constraints
 - No API keys in code — future DeepSeek key goes in `.env` only

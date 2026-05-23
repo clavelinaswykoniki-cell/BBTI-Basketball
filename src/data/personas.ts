@@ -1,5 +1,3 @@
-import type { DebateTopic } from "./debates";
-
 type Side = "kobe" | "lebron";
 
 interface Vote {
@@ -17,49 +15,129 @@ export interface Persona {
 const KOBE_TOPIC_IDS = ["rings", "clutch", "skill", "mentality", "defense", "loyalty"];
 const LEBRON_TOPIC_IDS = ["mvp", "finals", "teammates", "era", "iconic", "goat"];
 
-export function getPersona(side: Side, votes: Vote[], totalRounds: number): Persona {
+// Emotional / heart topics
+const EMOTIONAL_IDS = ["mentality", "loyalty", "clutch", "iconic"];
+// Stats / resume topics
+const STATS_IDS = ["mvp", "finals", "rings", "goat"];
+
+export function getPersona(side: Side, votes: Vote[], totalRounds: number, elapsedSeconds?: number): Persona {
   const ownVotes = votes.filter((v) => v.winner === side).length;
   const loyalty = ownVotes / totalRounds;
   const otherSide: Side = side === "kobe" ? "lebron" : "kobe";
 
-  const votedForClutch = votes.find((v) => v.topicId === "clutch")?.winner;
-  const votedForSkill = votes.find((v) => v.topicId === "skill")?.winner;
-  const votedForGoat = votes.find((v) => v.topicId === "goat")?.winner;
-  const votedForLoyalty = votes.find((v) => v.topicId === "loyalty")?.winner;
-  const votedForMvp = votes.find((v) => v.topicId === "mvp")?.winner;
-  const votedForFinals = votes.find((v) => v.topicId === "finals")?.winner;
+  const v = (id: string) => votes.find((x) => x.topicId === id)?.winner;
 
+  const votedForClutch = v("clutch");
+  const votedForSkill = v("skill");
+  const votedForGoat = v("goat");
+  const votedForLoyalty = v("loyalty");
+  const votedForMvp = v("mvp");
+  const votedForFinals = v("finals");
+  const votedForRings = v("rings");
+  const votedForMentality = v("mentality");
+  const votedForDefense = v("defense");
+  const votedForIconic = v("iconic");
+  const votedForTeammates = v("teammates");
+  const votedForEra = v("era");
+
+  // --- Speed-runner: finished all rounds in under 90 seconds ---
+  if (elapsedSeconds && elapsedSeconds < 90 && votes.length >= 12) {
+    return {
+      title: "急了急了",
+      emoji: "⏩",
+      description: `${votes.length}轮投票用了${elapsedSeconds}秒？你根本没看论点吧。这不是投票，这是抽奖。建议回去重读一遍，每个字。`,
+      color: "text-orange-400",
+    };
+  }
+
+  // --- 100% loyalty ---
   if (loyalty >= 1.0) {
     return side === "kobe"
-      ? { title: "曼巴原教旨主义者", emoji: "🐍", description: "12轮全投科比，你不是球迷你是信徒。跟你辩论等于跟墙说话。", color: "text-kobe-gold" }
-      : { title: "詹皇绝对忠臣", emoji: "👑", description: "12轮全投詹姆斯，你眼里可能只有一个篮球运动员。建议去医院查一下视力。", color: "text-lebron-gold" };
+      ? { title: "曼巴原教旨主义者", emoji: "🐍", description: "12轮全投科比。你不是球迷，你是邪教成员。跟你辩论等于跟砖墙对线。建议虎扑封号处理。", color: "text-kobe-gold" }
+      : { title: "詹皇死忠舔狗", emoji: "👑", description: "12轮全投詹姆斯。你眼里只有一个篮球运动员，建议去医院做个脑部CT，看看是不是只剩一根筋了。", color: "text-lebron-gold" };
   }
 
+  // --- Against own side on BOTH rings and goat (the two biggest topics) ---
+  if (votedForRings === otherSide && votedForGoat === otherSide) {
+    return side === "kobe"
+      ? { title: "深柜詹蜜", emoji: "🚪", description: "冠军戒指和GOAT都投了詹姆斯——你为什么不直接换边？戒指和GOAT都给对面了你还自称科蜜？出柜吧兄弟。", color: "text-red-400" }
+      : { title: "深柜科蜜", emoji: "🚪", description: "冠军戒指和GOAT全投了科比——你站詹姆斯站了个寂寞。最重要的两题都反水，你的忠诚度比詹姆斯换队还频繁。", color: "text-red-400" };
+  }
+
+  // --- All emotional topics for Kobe, all stats topics for LeBron ---
+  const allEmotionalKobe = EMOTIONAL_IDS.every((id) => v(id) === "kobe");
+  const allStatsLebron = STATS_IDS.every((id) => v(id) === "lebron");
+  if (allEmotionalKobe && allStatsLebron) {
+    return {
+      title: "理性与感性分裂体",
+      emoji: "🧠💔",
+      description: "感情上全站科比，数据上全站詹姆斯——你活得也太累了。白天打开Excel看数据服詹姆斯，晚上关灯看集锦哭科比。精神状态堪忧。",
+      color: "text-purple-400",
+    };
+  }
+
+  // --- Kobe everything EXCEPT goat (can't commit) ---
+  const mainTopicIds = ["rings", "clutch", "skill", "mvp", "mentality", "defense", "finals", "teammates", "era", "iconic", "loyalty"];
+  const allMainKobeExceptGoat = mainTopicIds.every((id) => v(id) === "kobe") && votedForGoat === "lebron";
+  if (allMainKobeExceptGoat) {
+    return {
+      title: "万年老二推崇者",
+      emoji: "🥈",
+      description: "11轮全投科比，就GOAT这一轮投了詹姆斯。你心里知道科比啥都好，就是历史地位差那么一丢丢。这比全投科比还扎心。",
+      color: "text-kobe-gold",
+    };
+  }
+
+  // --- Traitor: <25% loyalty ---
   if (loyalty <= 0.25) {
     return side === "kobe"
-      ? { title: "卧底詹蜜", emoji: "🕵️", description: "嘴上说站科比，投票全给了詹姆斯。你是来搞情报的吧？", color: "text-red-400" }
-      : { title: "卧底科蜜", emoji: "🕵️", description: "选了詹蜜的身份，票投给了科比。你跟詹姆斯换队一样不忠诚。", color: "text-red-400" };
+      ? { title: "卧底詹蜜", emoji: "🕵️", description: "嘴上说站科比，投票全给了詹姆斯。你比莱纳德离开马刺还无情。潜伏得挺深啊。", color: "text-red-400" }
+      : { title: "卧底科蜜", emoji: "🕵️", description: "选了詹蜜的身份，票全投给了科比。你跟詹姆斯一样——选了一边但心在另一边。", color: "text-red-400" };
   }
 
+  // --- Data nerd: admits Kobe is cooler but bows to stats ---
   if (votedForClutch === "kobe" && votedForSkill === "kobe" && votedForGoat === "lebron") {
-    return { title: "数据党理中客", emoji: "📊", description: "承认科比更帅更有技术，但最后还是跪在了数据面前。你一定很喜欢Excel。", color: "text-blue-400" };
+    return { title: "Excel球迷", emoji: "📊", description: "承认科比更帅更有技术更能杀人，但最后还是跪在了数据面前。你是不是做什么决定都要先开个表格？", color: "text-blue-400" };
   }
 
+  // --- Split personality: clutch=lebron but loyalty=kobe ---
   if (votedForClutch === "lebron" && votedForLoyalty === "kobe") {
-    return { title: "精神分裂球迷", emoji: "🤯", description: "认为科比更忠诚但詹姆斯关键球更强？你的大脑在打架。", color: "text-purple-400" };
+    return { title: "精神分裂球迷", emoji: "🤯", description: "科比更忠诚但关键球更差？你的大脑左右半球在打架。建议挂个神经科。", color: "text-purple-400" };
   }
 
+  // --- Stubborn Kobe fan: gave MVP + finals to LeBron but won't switch ---
   if (votedForFinals === "lebron" && votedForMvp === "lebron" && side === "kobe") {
-    return { title: "嘴硬的科蜜", emoji: "😤", description: "MVP和总决赛表现都给了詹姆斯，但你还是不肯承认。这就叫曼巴精神吗——永不认输？", color: "text-kobe-gold" };
+    return { title: "嘴硬型科蜜", emoji: "😤", description: "MVP和总决赛都给了詹姆斯，但死不承认。这就是传说中的曼巴精神吗？永不认输？还是永不认错？", color: "text-kobe-gold" };
   }
 
+  // --- Reverse stubborn: LeBron fan who gave clutch + mentality + loyalty to Kobe ---
+  if (votedForClutch === "kobe" && votedForMentality === "kobe" && votedForLoyalty === "kobe" && side === "lebron") {
+    return { title: "嘴硬型詹蜜", emoji: "😤", description: "关键球、精神力、忠诚全投了科比——你内心住着一个科蜜但嘴上不承认。这叫什么，傲娇？", color: "text-lebron-gold" };
+  }
+
+  // --- The contrarian: defense=kobe but era+iconic=lebron (or vice versa) ---
+  if (votedForDefense === "lebron" && votedForEra === "kobe" && votedForIconic === "kobe") {
+    return { title: "杠精附体", emoji: "🤡", description: "防守给了詹姆斯但影响力和经典时刻给了科比——你是不是就喜欢跟主流唱反调？虎扑十级杠精鉴定完毕。", color: "text-yellow-400" };
+  }
+
+  // --- The betrayer: Kobe fan who gave rings to LeBron ---
+  if (side === "kobe" && votedForRings === "lebron" && votedForGoat === "kobe") {
+    return { title: "精神胜利法大师", emoji: "🏅", description: "戒指给了詹姆斯但GOAT给了科比——所以冠军少的那个反而更伟大？你这逻辑能拿诺贝尔奖。", color: "text-kobe-gold" };
+  }
+
+  // --- High loyalty ---
   if (loyalty >= 0.75) {
     return side === "kobe"
-      ? { title: "正统曼巴门徒", emoji: "🔥", description: "大部分轮次站科比，偶尔也承认对面有道理。你是科蜜里少有的正常人。", color: "text-kobe-gold" }
-      : { title: "理性詹皇拥趸", emoji: "⚡", description: "大部分投了詹姆斯但不是无脑吹。可惜在评论区你还是会被骂。", color: "text-lebron-gold" };
+      ? { title: "正统曼巴门徒", emoji: "🔥", description: "大部分轮次站科比，偶尔也承认对面有道理。你是科蜜里最接近正常人的——虽然正常人不会花时间做这个测试。", color: "text-kobe-gold" }
+      : { title: "理性詹皇拥趸", emoji: "⚡", description: "大部分投了詹姆斯但不是无脑吹。可惜在虎扑评论区你还是会被两边骂。做人最苦莫过于此。", color: "text-lebron-gold" };
   }
 
-  return { title: "摇摆球迷", emoji: "⚖️", description: "两边都投了不少——你要么是真正的篮球理性人，要么是选择困难症。", color: "text-white" };
+  // --- Moderate loyalty ---
+  if (loyalty >= 0.4 && loyalty <= 0.6) {
+    return { title: "墙头草精", emoji: "🌾", description: "两边投得差不多——你不是理性，你是怂。选择困难症已经晚期了。下次做选择题建议直接扔硬币。", color: "text-white" };
+  }
+
+  return { title: "摇摆球迷", emoji: "⚖️", description: "两边都投了不少——你要么是真正的篮球哲学家，要么就是谁的论点最后一个看到就选谁。", color: "text-white" };
 }
 
 export function getRoast(side: Side, votes: Vote[]): string {
@@ -67,39 +145,73 @@ export function getRoast(side: Side, votes: Vote[]): string {
 
   const v = (id: string) => votes.find((x) => x.topicId === id)?.winner;
 
+  // --- Original patterns (rewritten spicier) ---
+
   if (v("clutch") === "kobe" && v("finals") === "lebron") {
-    patterns.push("你觉得科比关键球更强，但总决赛表现又投了詹姆斯——所以关键球强但大场面不行？这叫什么，精神胜利法？");
+    patterns.push("关键球投了科比，总决赛投了詹姆斯——所以科比关键球很强但大场面不行？这叫什么？关键球只在常规赛关键？绷不住了。");
   }
 
   if (v("skill") === "kobe" && v("mvp") === "lebron") {
-    patterns.push("科比技术更好但MVP给了詹姆斯——你在说一个技术更差的人拿了更多MVP？要不要听听自己在说什么？");
+    patterns.push("技术投了科比，MVP投了詹姆斯——你在说一个技术更差的人拿了更多MVP？所以MVP评的是什么？不技术大赛？你的逻辑已经去世了。");
   }
 
   if (v("mentality") === "kobe" && v("goat") === "lebron") {
-    patterns.push("曼巴精神投了科比，GOAT投了詹姆斯——所以最有精神力的球员不是最强的？那精神力有什么用？");
+    patterns.push("曼巴精神投了科比，GOAT投了詹姆斯——所以精神力最强的人不是最伟大的？那曼巴精神的含金量是不是被你亲手降级了？");
   }
 
   if (v("loyalty") === "kobe" && v("teammates") === "lebron") {
-    patterns.push("忠诚给了科比，队友环境给了詹姆斯——你是在说詹姆斯更会交朋友吗？");
+    patterns.push("忠诚给科比，队友给詹姆斯——你是在说不忠诚的人更会交朋友？那忠诚有什么用？社恐的美德？");
   }
 
   if (v("defense") === "kobe" && v("era") === "lebron") {
-    patterns.push("防守给了科比但时代影响力给了詹姆斯——你在说一个防守更好的人影响力更小？那防守有什么用？");
+    patterns.push("防守给科比，时代影响力给詹姆斯——防守更好的人影响力更小？那防守的意义是什么？自娱自乐？");
   }
 
   if (side === "kobe" && v("rings") === "lebron") {
-    patterns.push("科蜜连冠军戒指都没给科比投——你确定你站对边了？");
+    patterns.push("科蜜连冠军戒指都没投给科比——5比4你都选4？你确定你数学是体育老师教的吗？还是你内心已经叛变了？");
   }
 
   if (side === "lebron" && v("clutch") === "kobe") {
-    patterns.push("詹蜜承认了科比关键球更强——你内心深处知道最后一投该给谁。");
+    patterns.push("詹蜜承认科比关键球更强了——那最后一秒你把球给谁？你嘴上说詹姆斯，但你的手已经把球递给科比了。");
   }
+
+  // --- New roast patterns ---
+
+  if (v("rings") === "kobe" && v("goat") === "lebron") {
+    patterns.push("戒指给了科比但GOAT给了詹姆斯——所以冠军更多的人反而不是GOAT？那GOAT的标准是什么？不是冠军？那你为什么要投冠军那一轮？");
+  }
+
+  if (v("iconic") === "kobe" && v("finals") === "lebron") {
+    patterns.push("经典时刻给了科比，总决赛给了詹姆斯——你觉得科比的高光都不在总决赛？81分是打猛龙，退役60分是打爵士。确实不在总决赛。你这是在帮科比还是在黑科比？");
+  }
+
+  if (side === "lebron" && v("loyalty") === "kobe" && v("mentality") === "kobe") {
+    patterns.push("詹蜜把忠诚和精神力都给了科比——你是不是觉得詹姆斯就是个打工的？上班干活、下班回家、换老板就跑？你这哪是球迷，你是詹姆斯的HR。");
+  }
+
+  if (side === "kobe" && v("mvp") === "lebron" && v("goat") === "lebron") {
+    patterns.push("MVP和GOAT都给了詹姆斯你还说自己是科蜜？最有含金量的两个荣誉全给对面了。你不是科蜜，你是科比最大的黑粉。");
+  }
+
+  if (v("skill") === "lebron" && v("clutch") === "lebron" && v("defense") === "lebron") {
+    patterns.push("技术、关键球、防守三项全投了詹姆斯——你觉得科比在球场上干什么的？卖帅？你把篮球最核心的三个能力全否了，科比听了会直接把你的球迷证撕了。");
+  }
+
+  if (v("era") === "kobe" && v("teammates") === "lebron" && v("goat") === "lebron") {
+    patterns.push("时代影响力给科比，但队友和GOAT给詹姆斯——所以影响力最大的人不是GOAT？那影响力影响了个啥？影响大家哭了一场然后投票还是投詹姆斯？");
+  }
+
+  if (v("mentality") === "lebron" && v("loyalty") === "lebron" && side === "kobe") {
+    patterns.push("精神力和忠诚都投了詹姆斯——你作为科蜜，把曼巴精神和一人一城两张王牌全交出去了。科比在天上看着你，估计在想：这人是不是走错片场了。");
+  }
+
+  // --- Fallback ---
 
   if (patterns.length === 0) {
     if (side === "kobe") {
-      return "你的投票没什么自相矛盾——但你站科比这件事本身就是最大的矛盾。";
+      return "你的投票倒是没什么自相矛盾——但你站科比这件事本身就已经是这年头最大的矛盾了。历史得分王都不是科比你知道吧？";
     }
-    return "你的投票逻辑自洽——跟詹姆斯选择队友的逻辑一样：永远选更容易赢的那个。";
+    return "你的投票逻辑自洽——跟詹姆斯选队友的逻辑一样：永远选更容易赢的那个。安全、聪明、但就是不够热血。跟你的人生一样。";
   }
 
   return patterns[Math.floor(Math.random() * patterns.length)];

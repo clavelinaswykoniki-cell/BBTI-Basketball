@@ -3,14 +3,26 @@
 import { useGame } from "./GameProvider";
 
 export default function BonusIntro() {
-  const { kobeScore, lebronScore, startBonus, skipToResult } = useGame();
+  const { kobeScore, lebronScore, mainRounds, startBonus, skipToResult, restart } = useGame();
+
+  const handleExit = () => {
+    if (window.confirm("确定要退出？当前对决进度将不会保存。")) {
+      restart();
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 relative">
+      <button
+        onClick={handleExit}
+        className="absolute top-3 right-3 sm:top-5 sm:right-5 text-xs text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+      >
+        ✕ 退出
+      </button>
       <div className="text-center max-w-lg" style={{ animation: "fade-up 0.6s ease-out" }}>
         <div className="text-6xl mb-6">🔮</div>
         <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
-          12 轮正赛结束！
+          {mainRounds} 轮正赛结束！
         </h2>
         <div className="flex items-center justify-center gap-4 mb-6">
           <span className="text-kobe-gold font-bold text-2xl">{kobeScore}</span>
