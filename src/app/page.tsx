@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { GameProvider, useGame } from "@/components/GameProvider";
 import Landing from "@/components/Landing";
 import MatchupSelect from "@/components/MatchupSelect";
@@ -13,9 +14,48 @@ import QuizResult from "@/components/QuizResult";
 import BbtiEntry from "@/components/BbtiEntry";
 import BbtiQuiz from "@/components/BbtiQuiz";
 import BbtiResult from "@/components/BbtiResult";
+import BbtiCompare from "@/components/BbtiCompare";
+import { parseBbtiCompareDeepLink, parseBbtiDeepLink } from "@/lib/bbti-deep-links";
+import { parseDebateDeepLink } from "@/lib/debate-deep-links";
 
 function GameRouter() {
-  const { phase, bbtiMode, bbtiCode, bbtiAnswers, submitBbti, restart, openBbtiEntry } = useGame();
+  const {
+    phase,
+    bbtiMode,
+    bbtiCode,
+    bbtiAnswers,
+    submitBbti,
+    restart,
+    openBbtiEntry,
+    openBbtiCompare,
+    openBbtiResult,
+    startGame,
+    selectMatchup,
+  } = useGame();
+  const bootstrappedDeepLink = useRef(false);
+
+  useEffect(() => {
+    if (bootstrappedDeepLink.current) return;
+    bootstrappedDeepLink.current = true;
+
+    const deepLink = parseBbtiDeepLink(window.location.search);
+    if (deepLink.code) {
+      openBbtiResult(deepLink.code);
+      return;
+    }
+
+    const compareDeepLink = parseBbtiCompareDeepLink(window.location.search);
+    if (compareDeepLink.hasCompareParams) {
+      openBbtiCompare();
+      return;
+    }
+
+    const debateDeepLink = parseDebateDeepLink(window.location.search);
+    if (debateDeepLink.matchupId) {
+      selectMatchup(debateDeepLink.matchupId);
+    }
+  }, [openBbtiCompare, openBbtiResult, selectMatchup]);
+
   switch (phase) {
     case "landing":
       return <Landing />;
@@ -52,9 +92,13 @@ function GameRouter() {
           code={bbtiCode ?? "OAIL"}
           answers={bbtiAnswers}
           onRestart={() => { restart(); openBbtiEntry(); }}
-          onSwitchToDebate={restart}
+          onCompare={openBbtiCompare}
+          onChallengeMatchup={selectMatchup}
+          onSwitchToDebate={() => { restart(); startGame(); }}
         />
       );
+    case "bbti-compare":
+      return <BbtiCompare onBack={openBbtiEntry} onRetake={() => { restart(); openBbtiEntry(); }} />;
   }
 }
 

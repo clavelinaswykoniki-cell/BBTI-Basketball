@@ -431,11 +431,6 @@ function analyzePhilosophy(input: PhiloInput): PhilosophyReport {
  * 16 combinations → 16 named archetypes with 灵魂球员 + emoji.
  */
 
-type LetterO = "O" | "D";
-type LetterT = "T" | "W";
-type LetterS = "S" | "L";
-type LetterN = "N" | "E";
-
 // Axis literal types used by analyzePsychology (4-axis Chinese-name system)
 type AxisA = "持球大核" | "角色球员";
 type AxisB = "数据党" | "情怀党";

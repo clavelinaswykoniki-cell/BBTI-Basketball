@@ -5,28 +5,33 @@ import {
   bbtiQuestions,
   computeBbtiCode,
   type BbtiAnswer,
+  type BbtiQuestion,
 } from "../data/bbti";
-
-// ── Types (mirrored from data/bbti for reference) ──────────
-type QuestionType = "binary" | "multi" | "open";
-type PoleKey = "O" | "D" | "A" | "E" | "I" | "T" | "L" | "R";
-
-interface BbtiQuestion {
-  id: number;
-  type: QuestionType;
-  dimension: string;
-  core: boolean;
-  question: string;
-  optionA?: { text: string; pole: PoleKey };
-  optionB?: { text: string; pole: PoleKey };
-  options?: Array<{ text: string; scores: Partial<Record<PoleKey, number>> }>;
-  placeholder?: string;
-}
+import {
+  getBbtiAnswerReveal,
+  type BbtiAnswerReveal as BbtiAnswerRevealData,
+} from "@/data/bbti-answer-reveals";
+import {
+  clearBbtiDraft,
+  modeDisplayName,
+  readValidBbtiDraft,
+  writeBbtiDraft,
+  type BbtiMode,
+} from "@/lib/bbti-session";
+import BbtiAnswerReveal from "./BbtiAnswerReveal";
 
 interface BbtiQuizProps {
-  mode: "quick" | "full"; // 30 or 50 questions
+  mode: BbtiMode; // 12, 30, or 50 questions
   onComplete: (result: { code: string; answers: BbtiAnswer[] }) => void;
   onExit: () => void;
+}
+
+const BLITZ_QUESTION_IDS = new Set([1, 2, 5, 13, 14, 15, 25, 26, 29, 38, 39, 42]);
+
+interface DraftSnapshot {
+  answers: BbtiAnswer[];
+  current: number;
+  openText: string;
 }
 
 // ────────────────────────────────────────────────────────────
@@ -34,22 +39,51 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
   // Filter questions once based on mode
   const questions: BbtiQuestion[] = useMemo(
     () =>
-      (bbtiQuestions ?? []).filter(
-        (q: BbtiQuestion) => mode === "full" || q.core,
-      ),
+      (bbtiQuestions ?? []).filter((q: BbtiQuestion) => {
+        if (mode === "blitz") return BLITZ_QUESTION_IDS.has(q.id);
+        return mode === "full" || q.core;
+      }).sort((a: BbtiQuestion, b: BbtiQuestion) => {
+        if (a.type === "open" && b.type !== "open") return 1;
+        if (a.type !== "open" && b.type === "open") return -1;
+        return a.id - b.id;
+      }),
     [mode],
   );
 
   const total = questions.length;
+  const questionIds = useMemo(() => questions.map((question) => question.id), [questions]);
+  const initialDraft = useMemo(() => readValidBbtiDraft(mode, questionIds), [mode, questionIds]);
 
-  const [current, setCurrent] = useState(0);
-  const [answers, setAnswers] = useState<BbtiAnswer[]>([]);
+  const [current, setCurrent] = useState(() => initialDraft?.current ?? 0);
+  const [answers, setAnswers] = useState<BbtiAnswer[]>(() => initialDraft?.answers ?? []);
   const [animating, setAnimating] = useState(false);
   const [visible, setVisible] = useState(true);
   const [confirmExit, setConfirmExit] = useState(false);
-  const [openText, setOpenText] = useState("");
+  const [openText, setOpenText] = useState(() => initialDraft?.openText ?? "");
   const [selectedFlash, setSelectedFlash] = useState<string | null>(null);
+  const [answerReveal, setAnswerReveal] = useState<BbtiAnswerRevealData | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completedRef = useRef(false);
+  const latestDraftRef = useRef<DraftSnapshot>({
+    answers: initialDraft?.answers ?? [],
+    current: initialDraft?.current ?? 0,
+    openText: initialDraft?.openText ?? "",
+  });
+
+  const saveDraftSnapshot = useCallback(
+    (nextAnswers: BbtiAnswer[], nextCurrent: number, nextOpenText: string) => {
+      if (completedRef.current || total === 0) return;
+      writeBbtiDraft({
+        mode,
+        current: Math.min(Math.max(nextCurrent, 0), Math.max(total - 1, 0)),
+        total,
+        questionIds,
+        answers: nextAnswers,
+        openText: nextOpenText,
+      });
+    },
+    [mode, questionIds, total],
+  );
 
   // Clean up any pending advance timeout on unmount
   useEffect(
@@ -59,36 +93,66 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
     [],
   );
 
-  const q = questions[current] as BbtiQuestion | undefined;
-  const progress = total > 0 ? (current / total) * 100 : 0;
-  const isLast = current + 1 >= total;
-
-  // Reset per-question state on question change
   useEffect(() => {
-    setVisible(true);
-    setOpenText("");
-    setSelectedFlash(null);
-  }, [current]);
+    latestDraftRef.current = { answers, current, openText };
+
+    if (completedRef.current) return;
+    const hasProgress = current > 0 || answers.length > 0 || openText.trim().length > 0;
+    if (!hasProgress || total === 0) return;
+
+    saveDraftSnapshot(
+      answers,
+      Math.max(current, answers.length),
+      openText,
+    );
+  }, [answers, current, openText, saveDraftSnapshot, total]);
+
+  const q = questions[current] as BbtiQuestion | undefined;
+  const progress = total > 0 ? ((current + 1) / total) * 100 : 0;
+  const isLast = current + 1 >= total;
+  const revealDuration = mode === "blitz" ? 500 : 860;
 
   // ── Advance to next question or finish ────────────────────
   const advance = useCallback(
-    (newAnswers: BbtiAnswer[]) => {
+    (newAnswers: BbtiAnswer[], reveal: BbtiAnswerRevealData | null = null) => {
       if (animating) return;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setAnswerReveal(reveal);
       setAnimating(true);
       setVisible(false);
 
       timeoutRef.current = setTimeout(() => {
         if (current + 1 >= total) {
           const code = computeBbtiCode(newAnswers);
+          completedRef.current = true;
+          clearBbtiDraft();
           onComplete({ code, answers: newAnswers });
         } else {
           setCurrent((c) => c + 1);
+          setVisible(true);
+          setOpenText("");
+          setSelectedFlash(null);
+          setAnswerReveal(null);
           setAnimating(false);
         }
-      }, 500);
+      }, reveal ? revealDuration : 500);
     },
-    [animating, current, total, onComplete],
+    [animating, current, total, onComplete, revealDuration],
   );
+
+  function commitAnswer(answer: BbtiAnswer, revealAllowed: boolean) {
+    if (!q) return;
+    const newAnswers = [...answers, answer];
+    const nextCurrent = current + 1;
+    latestDraftRef.current = {
+      answers: newAnswers,
+      current: nextCurrent,
+      openText: "",
+    };
+    saveDraftSnapshot(newAnswers, nextCurrent, "");
+    setAnswers(newAnswers);
+    advance(newAnswers, revealAllowed && !isLast ? getBbtiAnswerReveal(q, answer) : null);
+  }
 
   // ── Binary handler ────────────────────────────────────────
   function handleBinaryClick(which: "A" | "B") {
@@ -99,9 +163,7 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
       questionId: q.id,
       selected: which,
     };
-    const newAnswers = [...answers, answer];
-    setAnswers(newAnswers);
-    advance(newAnswers);
+    commitAnswer(answer, true);
   }
 
   // ── Multi handler (single-select, auto-advance) ──────────
@@ -112,9 +174,7 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
       questionId: q.id,
       selectedIndices: [index],
     };
-    const newAnswers = [...answers, answer];
-    setAnswers(newAnswers);
-    advance(newAnswers);
+    commitAnswer(answer, true);
   }
 
   // ── Open-ended handler ────────────────────────────────────
@@ -124,9 +184,23 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
       questionId: q.id,
       text: openText.trim(),
     };
-    const newAnswers = [...answers, answer];
-    setAnswers(newAnswers);
-    advance(newAnswers);
+    commitAnswer(answer, false);
+  }
+
+  function saveAndExit() {
+    const latest = latestDraftRef.current;
+    const shouldUseLatest = latest.answers.length > answers.length || latest.current > current;
+    saveDraftSnapshot(
+      shouldUseLatest ? latest.answers : answers,
+      shouldUseLatest ? latest.current : Math.max(current, answers.length),
+      shouldUseLatest ? latest.openText : openText,
+    );
+    onExit();
+  }
+
+  function discardAndExit() {
+    clearBbtiDraft();
+    onExit();
   }
 
   // ── Empty state ───────────────────────────────────────────
@@ -160,20 +234,28 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
       {confirmExit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="glass rounded-2xl p-8 max-w-sm mx-4 text-center">
-            <p className="text-white text-lg font-bold mb-2">确定退出？</p>
-            <p className="text-white/50 text-sm mb-6">进度不会保存</p>
-            <div className="flex gap-4">
+            <p className="text-white text-lg font-bold mb-2">叫个暂停？</p>
+            <p className="text-white/50 text-sm mb-6">
+              进度已自动保存，回到入口页可继续第 {Math.min(current + 1, total)}/{total} 题。
+            </p>
+            <div className="space-y-3">
               <button
                 onClick={() => setConfirmExit(false)}
-                className="flex-1 py-3 min-h-[48px] rounded-xl border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-all cursor-pointer"
+                className="w-full py-3 min-h-[48px] rounded-xl border border-white/10 text-white/65 hover:text-white hover:border-white/30 transition-all cursor-pointer"
               >
-                取消
+                继续答题
               </button>
               <button
-                onClick={onExit}
-                className="flex-1 py-3 min-h-[48px] rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer"
+                onClick={saveAndExit}
+                className="w-full py-3 min-h-[48px] rounded-xl bg-gradient-to-r from-kobe-gold to-lebron-gold text-black font-black hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
               >
-                确定
+                保存并返回入口
+              </button>
+              <button
+                onClick={discardAndExit}
+                className="w-full py-2 text-xs font-bold text-white/32 hover:text-red-300 transition-colors cursor-pointer"
+              >
+                放弃本次进度
               </button>
             </div>
           </div>
@@ -183,7 +265,7 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
       {/* ─── Progress bar ───────────────────────────────── */}
       <div className="w-full max-w-xl mb-8">
         <div className="flex justify-between text-xs text-white/30 mb-2">
-          <span>BBTI 篮球人格测试</span>
+          <span>{modeDisplayName(mode)}</span>
           <span>第 {current + 1}/{total} 题</span>
         </div>
         <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -194,9 +276,11 @@ export default function BbtiQuiz({ mode, onComplete, onExit }: BbtiQuizProps) {
         </div>
       </div>
 
+      <BbtiAnswerReveal reveal={answerReveal} compact={mode === "blitz"} />
+
       {/* ─── Question card ──────────────────────────────── */}
       <div
-        className="w-full max-w-xl"
+        className="w-full max-w-xl min-h-[420px] flex flex-col justify-center"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0)" : "translateY(-16px)",

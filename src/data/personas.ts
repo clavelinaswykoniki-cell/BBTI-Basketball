@@ -12,9 +12,6 @@ export interface Persona {
   color: string;
 }
 
-const KOBE_TOPIC_IDS = ["rings", "clutch", "skill", "mentality", "defense", "loyalty"];
-const LEBRON_TOPIC_IDS = ["mvp", "finals", "teammates", "era", "iconic", "goat"];
-
 // Emotional / heart topics
 const EMOTIONAL_IDS = ["mentality", "loyalty", "clutch", "iconic"];
 // Stats / resume topics
@@ -37,7 +34,6 @@ export function getPersona(side: Side, votes: Vote[], totalRounds: number, elaps
   const votedForMentality = v("mentality");
   const votedForDefense = v("defense");
   const votedForIconic = v("iconic");
-  const votedForTeammates = v("teammates");
   const votedForEra = v("era");
 
   // --- Speed-runner: finished all rounds in under 90 seconds ---

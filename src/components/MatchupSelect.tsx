@@ -2,6 +2,7 @@
 
 import { useGame } from "./GameProvider";
 import { matchups } from "@/data/matchups";
+import { MATCHUP_TAGS } from "@/data/matchup-tags";
 
 // Map color token names to CSS variable values so Tailwind JIT isn't needed
 // for dynamic class construction.
@@ -50,7 +51,7 @@ export default function MatchupSelect() {
               篮球人格测试 &middot; Basketball Brain Type Indicator
             </h3>
             <p className="text-white/60 text-sm sm:text-base">
-              30 题精简版 / 50 题完整版 &middot; 4 维度 &middot; 16 种人格 &middot; 含 1 道深度开放题
+              12 题闪电版 / 30 题精简版 / 50 题完整版 &middot; 4 维度 &middot; 16 种人格
             </p>
           </div>
           <div className="text-kobe-gold font-bold text-sm sm:text-base whitespace-nowrap group-hover:text-white transition-colors flex items-center gap-2">
@@ -67,60 +68,87 @@ export default function MatchupSelect() {
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full max-w-5xl">
-        {matchups.map((matchup) => (
-          <button
-            key={matchup.id}
-            onClick={() => selectMatchup(matchup.id)}
-            className="group relative overflow-hidden rounded-2xl border-2 border-white/10
-              hover:border-kobe-gold/60 transition-all duration-300 cursor-pointer
-              hover:scale-[1.03] active:scale-[0.98]"
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-white/[0.02] group-hover:from-kobe-purple/30 group-hover:to-lebron-wine/30 transition-all duration-300" />
-            <div className="relative z-10 p-6 sm:p-8 text-center">
-              {/* Emoji */}
-              <div className="text-3xl sm:text-4xl mb-4">
-                {matchup.emoji}
+        {matchups.map((matchup) => {
+          const tags = MATCHUP_TAGS[matchup.id];
+          return (
+            <button
+              key={matchup.id}
+              onClick={() => selectMatchup(matchup.id)}
+              className="group relative overflow-hidden rounded-2xl border-2 border-white/10
+                hover:border-kobe-gold/60 transition-all duration-300 cursor-pointer
+                hover:scale-[1.03] active:scale-[0.98]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-white/[0.02] group-hover:from-kobe-purple/30 group-hover:to-lebron-wine/30 transition-all duration-300" />
+              <div className="relative z-10 p-6 sm:p-8 text-center">
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <span className="rounded-full border border-kobe-gold/25 px-2.5 py-1 text-[10px] font-black text-kobe-gold">
+                    {tags?.heat ?? "85 HEAT"}
+                  </span>
+                  <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold text-white/45">
+                    {tags?.lane ?? "经典对决"}
+                  </span>
+                </div>
+
+                {/* Emoji */}
+                <div className="text-3xl sm:text-4xl mb-4">
+                  {matchup.emoji}
+                </div>
+
+                {/* Player numbers */}
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <span
+                    className="text-2xl sm:text-3xl font-black"
+                    style={{ color: playerColor(matchup.playerA.color) }}
+                  >
+                    {matchup.playerA.number}
+                  </span>
+                  <span className="text-lg font-black text-white/30">VS</span>
+                  <span
+                    className="text-2xl sm:text-3xl font-black"
+                    style={{ color: playerColor(matchup.playerB.color) }}
+                  >
+                    {matchup.playerB.number}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+                  {matchup.title}
+                </h3>
+
+                {/* Subtitle */}
+                <p className="text-white/40 text-sm">
+                  {matchup.subtitle}
+                </p>
+
+                <p className="mt-3 min-h-[34px] text-xs text-white/35 leading-relaxed">
+                  {tags?.advisor ?? "适合快速测出你的篮球争议口味"}
+                </p>
+
+                <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                  {(tags?.axes ?? ["价值观", "打法", "荣誉"]).map((axis) => (
+                    <span
+                      key={axis}
+                      className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold text-white/45"
+                    >
+                      {axis}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Player names on hover */}
+                <div className="mt-4 text-white/50 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {matchup.playerA.name} vs {matchup.playerB.name}
+                </div>
+
+                {/* CTA */}
+                <div className="mt-3 text-kobe-gold text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                  开始测试 &rarr;
+                </div>
               </div>
-
-              {/* Player numbers */}
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <span
-                  className="text-2xl sm:text-3xl font-black"
-                  style={{ color: playerColor(matchup.playerA.color) }}
-                >
-                  {matchup.playerA.number}
-                </span>
-                <span className="text-lg font-black text-white/30">VS</span>
-                <span
-                  className="text-2xl sm:text-3xl font-black"
-                  style={{ color: playerColor(matchup.playerB.color) }}
-                >
-                  {matchup.playerB.number}
-                </span>
-              </div>
-
-              {/* Title */}
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
-                {matchup.title}
-              </h3>
-
-              {/* Subtitle */}
-              <p className="text-white/40 text-sm">
-                {matchup.subtitle}
-              </p>
-
-              {/* Player names on hover */}
-              <div className="mt-4 text-white/50 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                {matchup.playerA.name} vs {matchup.playerB.name}
-              </div>
-
-              {/* CTA */}
-              <div className="mt-3 text-kobe-gold text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                开始测试 &rarr;
-              </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
 
         {/* Custom matchup card */}
         <button

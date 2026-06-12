@@ -1,67 +1,174 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useGame } from "./GameProvider";
-import { statBombs } from "@/data/personas";
+import { getDebatesForMatchup } from "@/data/debate-loader";
 import { recordVote } from "@/lib/voteStats";
+import { getMatchupSlots } from "@/lib/matchupSlots";
+import { getStatBombsForMatchup } from "@/data/stat-bombs";
 import VoteReveal from "./VoteReveal";
 import GlobalWar from "./GlobalWar";
+import BbtiBattleReplayLens from "./BbtiBattleReplayLens";
+import BbtiCaseBattleMobileStack, { BbtiCaseBattleMobileControls } from "./BbtiCaseBattleMobileStack";
+import BbtiChallengeCaseBanner from "./BbtiChallengeCaseBanner";
+import BbtiChallengeCaseTrail from "./BbtiChallengeCaseTrail";
+import ReplayCenter from "./ReplayCenter";
+import CourtAgenda from "./CourtAgenda";
+import CourtSideAdvisor from "./CourtSideAdvisor";
+import DebateSideCard from "./DebateSideCard";
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
 
 export default function BattleArena() {
-  const { currentTopic, currentRound, totalRounds, mainRounds, isBonus, vote, nextRound, kobeScore, lebronScore, currentMatchup, restart } =
+  const { currentTopic, currentRound, totalRounds, mainRounds, isBonus, vote, votes, nextRound, kobeScore, lebronScore, currentMatchup, matchupId, bbtiChallengeCase, restart } =
     useGame();
-  const pA = currentMatchup?.playerA;
-  const pB = currentMatchup?.playerB;
-  const nameA = pA?.nameZh ?? "科比";
-  const nameB = pB?.nameZh ?? "詹姆斯";
+  const slots = getMatchupSlots(matchupId, currentMatchup);
+  const pA = slots.kobe;
+  const pB = slots.lebron;
+  const nameA = pA.nameZh;
+  const nameB = pB.nameZh;
   const [voted, setVoted] = useState<"kobe" | "lebron" | null>(null);
   const votedRef = useRef<"kobe" | "lebron" | null>(null);
   const [animKey, setAnimKey] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [readMode, setReadMode] = useState(false);
+  const caseTrailTopics = useMemo(() => {
+    const { main, bonus } = getDebatesForMatchup(matchupId);
+    return [...main, ...bonus];
+  }, [matchupId]);
 
-  useEffect(() => {
+  const goNextRound = useCallback(() => {
     setVoted(null);
     votedRef.current = null;
     setAnimKey((k) => k + 1);
     setCountdown(null);
-  }, [currentRound]);
+    setAutoAdvance(true);
+    setReadMode(false);
+    nextRound();
+  }, [nextRound]);
 
   useEffect(() => {
-    if (!voted) return;
-    setCountdown(5);
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c === null || c <= 1) {
-          clearInterval(interval);
-          nextRound();
-          return null;
-        }
-        return c - 1;
-      });
+    if (!voted || !autoAdvance || countdown === null) return;
+    const timer = setTimeout(() => {
+      if (countdown <= 1) {
+        goNextRound();
+      } else {
+        setCountdown(countdown - 1);
+      }
     }, 1000);
-    return () => clearInterval(interval);
-  }, [voted, nextRound]);
+    return () => clearTimeout(timer);
+  }, [autoAdvance, countdown, voted, goNextRound]);
 
   const statBomb = useMemo(() => {
     if (!voted || !currentTopic) return null;
-    const bombs = statBombs[currentTopic.id];
-    if (!bombs) return null;
+    const bombs = getStatBombsForMatchup(matchupId, currentTopic.id);
+    if (bombs.length === 0) return null;
     const opposing = bombs.find((b) => b.side !== voted);
     return opposing || bombs[0];
-  }, [voted, currentTopic]);
+  }, [voted, currentTopic, matchupId]);
+  const nextTopic = caseTrailTopics[currentRound + 1] ?? null;
 
-  if (!currentTopic) return null;
+  const voteForSide = useCallback((winner: "kobe" | "lebron") => {
+    if (!currentTopic || votedRef.current) return;
+    const shouldPause = readMode || Boolean(bbtiChallengeCase) || prefersReducedMotion();
+    votedRef.current = winner;
+    setVoted(winner);
+    setCountdown(shouldPause ? null : 8);
+    setAutoAdvance(!shouldPause);
+    vote(winner);
+    recordVote(currentTopic.id, winner, matchupId);
+  }, [bbtiChallengeCase, currentTopic, matchupId, readMode, vote]);
 
   const handleCardClick = (winner: "kobe" | "lebron") => {
     if (votedRef.current) {
-      nextRound();
+      goNextRound();
       return;
     }
-    votedRef.current = winner;
-    setVoted(winner);
-    vote(winner);
-    if (currentTopic) recordVote(currentTopic.id, winner);
+    voteForSide(winner);
   };
+
+  const handleExtendReview = useCallback(() => {
+    setReadMode(false);
+    setAutoAdvance(true);
+    setCountdown((current) => (current ?? 0) + 10);
+  }, []);
+
+  const handlePauseAutoAdvance = useCallback(() => {
+    setReadMode(true);
+    setAutoAdvance(false);
+    setCountdown(null);
+  }, []);
+
+  const toggleReadMode = useCallback(() => {
+    setReadMode((current) => {
+      const next = !current;
+      if (next) {
+        setAutoAdvance(false);
+        setCountdown(null);
+      } else if (votedRef.current) {
+        setAutoAdvance(true);
+        setCountdown(8);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.repeat) return;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (event.key === "l" || event.key === "L") {
+        event.preventDefault();
+        toggleReadMode();
+        return;
+      }
+
+      if (!currentTopic) return;
+
+      if (!votedRef.current) {
+        if (event.key === "ArrowLeft" || event.key === "1") {
+          event.preventDefault();
+          voteForSide("kobe");
+        }
+        if (event.key === "ArrowRight" || event.key === "2") {
+          event.preventDefault();
+          voteForSide("lebron");
+        }
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === "n" || event.key === "N") {
+        event.preventDefault();
+        goNextRound();
+      }
+      if (event.key === "r" || event.key === "R") {
+        event.preventDefault();
+        handleExtendReview();
+      }
+      if (event.key === "p" || event.key === "P") {
+        event.preventDefault();
+        handlePauseAutoAdvance();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [currentTopic, goNextRound, handleExtendReview, handlePauseAutoAdvance, toggleReadMode, voteForSide]);
+
+  if (!currentTopic) return null;
 
   const handleExit = () => {
     if (window.confirm("确定要退出当前对决？进度将不会保存。")) {
@@ -79,6 +186,22 @@ export default function BattleArena() {
       </button>
       {/* Global war banner */}
       <GlobalWar />
+
+      <BbtiChallengeCaseBanner context={bbtiChallengeCase} compact />
+
+      <div className="mb-4 flex justify-center">
+        <button
+          onClick={toggleReadMode}
+          title="L 切换读报模式，1/← 选左，2/→ 选右，N/Enter 下一题"
+          className={`rounded-full border px-4 py-2 text-xs font-black transition-colors cursor-pointer ${
+            readMode
+              ? "border-kobe-gold bg-kobe-gold text-black"
+              : "border-white/10 bg-white/[0.03] text-white/45 hover:text-white/75"
+          }`}
+        >
+          {readMode ? "读报模式 ON" : "读报模式"}
+        </button>
+      </div>
 
       {/* Header: score + progress */}
       <div className="flex items-center justify-between mb-6">
@@ -127,115 +250,111 @@ export default function BattleArena() {
         </h2>
       </div>
 
+      <CourtAgenda
+        matchupId={matchupId}
+        nameA={nameA}
+        nameB={nameB}
+        topicTitle={currentTopic.title}
+        compact
+      />
+
       {/* Debate cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        {/* Kobe card */}
-        <div
-          className={`rounded-2xl p-5 sm:p-6 border-2 transition-all duration-300 cursor-pointer
-            ${voted === "kobe"
-              ? "border-kobe-gold bg-kobe-purple/30 scale-[1.02] vote-flash-kobe"
-              : voted === "lebron"
-                ? "border-white/10 bg-white/5 opacity-60"
-                : "border-kobe-gold/20 bg-kobe-purple/10 hover:border-kobe-gold/60 hover:bg-kobe-purple/20"
-            }`}
-          onClick={() => handleCardClick("kobe")}
-          style={{ animation: "card-enter 0.5s ease-out" }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-kobe-gold font-black text-lg">{pA?.number ?? "#24"}</span>
-            <span className="text-white font-bold text-sm sm:text-base">{nameA}说：</span>
-            {voted === "kobe" && (
-              <span className="ml-auto text-kobe-gold text-sm font-bold">✓ 你的选择</span>
-            )}
-          </div>
-          <p className="text-white/90 font-semibold mb-4 text-sm sm:text-base leading-relaxed">
-            {currentTopic.kobe.claim}
-          </p>
-          <ul className="space-y-2 mb-4">
-            {currentTopic.kobe.points.map((p, i) => (
-              <li key={i} className="flex gap-2 text-white/70 text-xs sm:text-sm leading-relaxed">
-                <span className="text-kobe-gold mt-0.5 shrink-0">•</span>
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="border-t border-kobe-gold/20 pt-3 mt-auto">
-            <p className="text-kobe-gold font-bold text-xs sm:text-sm italic">
-              &ldquo;{currentTopic.kobe.punchline}&rdquo;
-            </p>
-          </div>
-        </div>
+        <DebateSideCard
+          side="kobe"
+          playerNumber={pA.number}
+          playerName={nameA}
+          content={currentTopic.kobe}
+          voted={voted}
+          onChoose={handleCardClick}
+        />
 
-        {/* LeBron card */}
-        <div
-          className={`rounded-2xl p-5 sm:p-6 border-2 transition-all duration-300 cursor-pointer
-            ${voted === "lebron"
-              ? "border-lebron-gold bg-lebron-wine/30 scale-[1.02] vote-flash-lebron"
-              : voted === "kobe"
-                ? "border-white/10 bg-white/5 opacity-60"
-                : "border-lebron-gold/20 bg-lebron-wine/10 hover:border-lebron-gold/60 hover:bg-lebron-wine/20"
-            }`}
-          onClick={() => handleCardClick("lebron")}
-          style={{ animation: "card-enter-right 0.5s ease-out 0.1s both" }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lebron-gold font-black text-lg">{pB?.number ?? "#23"}</span>
-            <span className="text-white font-bold text-sm sm:text-base">{nameB}说：</span>
-            {voted === "lebron" && (
-              <span className="ml-auto text-lebron-gold text-sm font-bold">✓ 你的选择</span>
-            )}
-          </div>
-          <p className="text-white/90 font-semibold mb-4 text-sm sm:text-base leading-relaxed">
-            {currentTopic.lebron.claim}
-          </p>
-          <ul className="space-y-2 mb-4">
-            {currentTopic.lebron.points.map((p, i) => (
-              <li key={i} className="flex gap-2 text-white/70 text-xs sm:text-sm leading-relaxed">
-                <span className="text-lebron-gold mt-0.5 shrink-0">•</span>
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="border-t border-lebron-gold/20 pt-3 mt-auto">
-            <p className="text-lebron-gold font-bold text-xs sm:text-sm italic">
-              &ldquo;{currentTopic.lebron.punchline}&rdquo;
-            </p>
-          </div>
-        </div>
+        <DebateSideCard
+          side="lebron"
+          playerNumber={pB.number}
+          playerName={nameB}
+          content={currentTopic.lebron}
+          voted={voted}
+          onChoose={handleCardClick}
+        />
       </div>
 
-      {/* Stat bomb reveal after voting */}
-      {voted && statBomb && (
-        <div
-          className="mt-6 mx-auto w-full max-w-2xl rounded-xl bg-gradient-to-r from-yellow-900/20 to-red-900/20 border border-yellow-500/30 p-4 text-center"
-          style={{ animation: "fade-up 0.4s ease-out" }}
-        >
-          <div className="text-xs text-yellow-400/80 font-bold mb-2">
-            💣 一个数据终结争论
-          </div>
-          <p className="text-white/90 text-sm sm:text-base font-semibold mb-1">
-            {statBomb.stat}
-          </p>
-          <p className="text-white/40 text-xs">
-            来源：{statBomb.source} · 偏向{statBomb.side === "kobe" ? nameA : nameB}
-          </p>
-        </div>
-      )}
-
-      {/* Global vote reveal */}
-      {voted && currentTopic && (
-        <VoteReveal topicId={currentTopic.id} votedFor={voted} />
-      )}
-
       {voted && (
-        <p className="text-center text-white/25 text-xs mt-6" style={{ animation: "fade-up 0.6s ease-out" }}>
-          点击任意卡片进入下一题 · {countdown !== null ? `${countdown}s 后自动继续` : ""}
-        </p>
+        <BbtiCaseBattleMobileStack
+          autoAdvanceState={autoAdvance && countdown !== null ? "running" : "paused"}
+          caseContext={bbtiChallengeCase}
+          roundNumber={currentRound + 1}
+          votedFor={voted}
+        >
+          {statBomb && (
+            <div className="order-1" data-bbti-case-battle-mobile-slot="replay">
+              <ReplayCenter
+                bomb={statBomb}
+                matchupId={matchupId ?? undefined}
+                nameA={nameA}
+                nameB={nameB}
+                roundNumber={currentRound + 1}
+                topicId={currentTopic.id}
+              />
+            </div>
+          )}
+
+          <div className="order-2" data-bbti-case-battle-mobile-slot="advisor">
+            <CourtSideAdvisor
+              topic={currentTopic}
+              votedFor={voted}
+              nameA={nameA}
+              nameB={nameB}
+              statBomb={statBomb}
+              caseContext={bbtiChallengeCase}
+            />
+          </div>
+
+          <div className="order-4 sm:order-3" data-bbti-case-battle-mobile-slot="lens">
+            <BbtiBattleReplayLens
+              caseContext={bbtiChallengeCase}
+              matchupId={matchupId}
+              nameA={nameA}
+              nameB={nameB}
+              nextTopic={nextTopic}
+              roundNumber={currentRound + 1}
+              statBomb={statBomb}
+              topic={currentTopic}
+              votedFor={voted}
+            />
+          </div>
+
+          <div className="order-5 sm:order-4" data-bbti-case-battle-mobile-slot="trail">
+            <BbtiChallengeCaseTrail
+              context={bbtiChallengeCase}
+              currentRound={currentRound}
+              nameA={nameA}
+              nameB={nameB}
+              topics={caseTrailTopics}
+              votes={votes}
+            />
+          </div>
+
+          <div className="order-6 sm:order-5" data-bbti-case-battle-mobile-slot="vote-reveal">
+            <VoteReveal topicId={currentTopic.id} votedFor={voted} />
+          </div>
+
+          <div className="order-3 sm:order-6" data-bbti-case-battle-mobile-slot="controls">
+            <BbtiCaseBattleMobileControls
+              autoAdvance={autoAdvance}
+              countdown={countdown}
+              onExtendReview={handleExtendReview}
+              onNextRound={goNextRound}
+              onPauseAutoAdvance={handlePauseAutoAdvance}
+              readMode={readMode}
+            />
+          </div>
+        </BbtiCaseBattleMobileStack>
       )}
 
       {!voted && (
         <p className="text-center text-white/30 text-sm mt-6">
-          点击你认为更有道理的一方
+          选择你认为更有道理的一方 · 1/← 选左 · 2/→ 选右
         </p>
       )}
     </div>

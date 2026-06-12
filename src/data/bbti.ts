@@ -52,6 +52,12 @@ export interface BbtiType {
   shareText?: string;
 }
 
+export interface BbtiScoreResult {
+  scores: Record<PoleKey, number>;
+  code: string;
+  percentages: Record<DimensionKey, number>;
+}
+
 // ---------------------------------------------------------------------------
 // Questions (50 total, 30 core)
 // ---------------------------------------------------------------------------
@@ -1091,7 +1097,7 @@ export const bbtiTypes: Record<string, BbtiType> = {
     weaknesses: [
       "看全明星赛觉得是浪费时间，「这不是篮球」",
       "朋友圈发的防守集锦没人看，零点赞",
-      "被人嘲笑「你看的是篮球还是足球？」",
+      "被人嘲笑「你看的是防守录像还是进攻比赛？」",
     ],
     compatibility: "DEIL",
     nemesis: "OATR",
@@ -1130,13 +1136,45 @@ export const bbtiTypes: Record<string, BbtiType> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Compute BBTI 4-letter code from a set of answers.
+ * Score one BBTI answer.
  *
  * Binary questions: chosen pole gets +2.
- * Multi questions: first selected option's scores are applied.
+ * Multi questions: selected option scores are applied.
  * Open questions: ignored for scoring.
  */
-export function computeBbtiCode(answers: BbtiAnswer[]): string {
+export function scoreBbtiAnswer(
+  question: BbtiQuestion,
+  answer: BbtiAnswer,
+): Partial<Record<PoleKey, number>> {
+  const scores: Partial<Record<PoleKey, number>> = {};
+
+  if (question.type === "open") return scores;
+
+  if (question.type === "binary" && answer.selected) {
+    if (answer.selected === "A" && question.optionA) {
+      scores[question.optionA.pole] = 2;
+    } else if (answer.selected === "B" && question.optionB) {
+      scores[question.optionB.pole] = 2;
+    }
+  }
+
+  if (question.type === "multi" && answer.selectedIndices && question.options) {
+    for (const idx of answer.selectedIndices) {
+      const option = question.options[idx];
+      if (!option) continue;
+      for (const [pole, value] of Object.entries(option.scores)) {
+        scores[pole as PoleKey] = (scores[pole as PoleKey] ?? 0) + (value ?? 0);
+      }
+    }
+  }
+
+  return scores;
+}
+
+/**
+ * Score BBTI answers and return raw pole scores, code, and per-axis confidence.
+ */
+export function scoreBbtiAnswers(answers: BbtiAnswer[]): BbtiScoreResult {
   const scores: Record<PoleKey, number> = {
     O: 0,
     D: 0,
@@ -1152,24 +1190,9 @@ export function computeBbtiCode(answers: BbtiAnswer[]): string {
     const question = bbtiQuestions.find((q) => q.id === answer.questionId);
     if (!question) continue;
 
-    if (question.type === "open") continue;
-
-    if (question.type === "binary" && answer.selected) {
-      if (answer.selected === "A" && question.optionA) {
-        scores[question.optionA.pole] += 2;
-      } else if (answer.selected === "B" && question.optionB) {
-        scores[question.optionB.pole] += 2;
-      }
-    }
-
-    if (question.type === "multi" && answer.selectedIndices && question.options) {
-      for (const idx of answer.selectedIndices) {
-        const option = question.options[idx];
-        if (!option) continue;
-        for (const [pole, value] of Object.entries(option.scores)) {
-          scores[pole as PoleKey] += value;
-        }
-      }
+    const answerScore = scoreBbtiAnswer(question, answer);
+    for (const [pole, value] of Object.entries(answerScore)) {
+      scores[pole as PoleKey] += value ?? 0;
     }
   }
 
@@ -1178,7 +1201,28 @@ export function computeBbtiCode(answers: BbtiAnswer[]): string {
   const dim3 = scores.I >= scores.T ? "I" : "T";
   const dim4 = scores.L >= scores.R ? "L" : "R";
 
-  return `${dim1}${dim2}${dim3}${dim4}`;
+  const axisPercent = (left: PoleKey, right: PoleKey, chosen: PoleKey) => {
+    const total = scores[left] + scores[right];
+    return total > 0 ? Math.round(((scores[chosen] ?? 0) / total) * 100) : 50;
+  };
+
+  return {
+    scores,
+    code: `${dim1}${dim2}${dim3}${dim4}`,
+    percentages: {
+      OD: axisPercent("O", "D", dim1),
+      AE: axisPercent("A", "E", dim2),
+      IT: axisPercent("I", "T", dim3),
+      LR: axisPercent("L", "R", dim4),
+    },
+  };
+}
+
+/**
+ * Compute BBTI 4-letter code from a set of answers.
+ */
+export function computeBbtiCode(answers: BbtiAnswer[]): string {
+  return scoreBbtiAnswers(answers).code;
 }
 
 /**

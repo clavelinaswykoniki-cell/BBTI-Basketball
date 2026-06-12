@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getTopicStats, type TopicStats } from "@/lib/voteStats";
 import { useGame } from "./GameProvider";
+import { getMatchupSlots } from "@/lib/matchupSlots";
 
 // ── Provocative callouts based on how minority you are ─────────────────
 
@@ -30,9 +31,9 @@ function getCallout(
   if (myPercent <= 20) {
     return deterministicPick(
       [
-        `全球只有 ${myPercent}% 的人同意你——你是来搞笑的吧？`,
-        `${myPercent}%？恭喜你，你的观点比大熊猫还稀有。`,
-        `${myPercent}% 同意你——另外 ${100 - myPercent}% 在笑。`,
+        `只有 ${myPercent}% 站你这边——你现在坐在少数派替补席第一排。`,
+        `${myPercent}% 的支持率，这票必须立刻申请教练挑战。`,
+        `${myPercent}% 同意你——另外 ${100 - myPercent}% 已经在群聊等你的反证。`,
       ],
       topicId,
       votedFor
@@ -42,9 +43,9 @@ function getCallout(
   if (myPercent <= 30) {
     return deterministicPick(
       [
-        `只有 ${myPercent}% 的人同意你——你确定？`,
-        `${myPercent}% 的人站你这边。剩下 ${100 - myPercent}% 觉得你需要看眼科。`,
-        `全网 ${100 - myPercent}% 的人觉得你离谱——截图发群让他们评评理？`,
+        `只有 ${myPercent}% 的人同意你——这球要打加时才能说清。`,
+        `${myPercent}% 的人站你这边。剩下 ${100 - myPercent}% 正准备包夹你的论点。`,
+        `${100 - myPercent}% 的人不同意你——截图发群，让他们拿证据防你。`,
       ],
       topicId,
       votedFor
@@ -56,7 +57,7 @@ function getCallout(
       [
         `${myPercent}% 的人和你一样——少数派，但不孤单。`,
         `只有 ${myPercent}% 站你这边——要不要截图证明你的勇气？`,
-        `${100 - myPercent}% 的人不同意你。这是勇敢还是固执？`,
+        `${100 - myPercent}% 的人不同意你。这是弱侧埋伏，还是强行出手？`,
       ],
       topicId,
       votedFor
@@ -71,7 +72,7 @@ function getCallout(
     return deterministicPick(
       [
         `${myPercent}% 的人和你一样——主流意见，但少数派不服。`,
-        `你站在 ${myPercent}% 这边。安全牌？还是你真懂球？`,
+        `你站在 ${myPercent}% 这边。安全出球，还是你真看穿了防守？`,
       ],
       topicId,
       votedFor
@@ -81,8 +82,8 @@ function getCallout(
   // > 70% — dominant opinion
   return deterministicPick(
     [
-      `${myPercent}% 压倒性支持——这还用辩？`,
-      `${myPercent}% 同意你。剩下那 ${100 - myPercent}% 建议回去补补课。`,
+      `${myPercent}% 压倒性支持——但领先方也要防最后一波反扑。`,
+      `${myPercent}% 同意你。剩下那 ${100 - myPercent}% 需要一条真正能翻盘的反证。`,
       `你和 ${myPercent}% 的人想法一致——但真理不总在多数手中哦。`,
     ],
     topicId,
@@ -98,45 +99,48 @@ interface VoteRevealProps {
 }
 
 export default function VoteReveal({ topicId, votedFor }: VoteRevealProps) {
-  const { currentMatchup } = useGame();
-  const nameA = currentMatchup?.playerA.nameZh ?? "科比";
-  const nameB = currentMatchup?.playerB.nameZh ?? "詹姆斯";
-  const [mounted, setMounted] = useState(false);
-  const [stats, setStats] = useState<TopicStats | null>(null);
+  const { currentMatchup, matchupId } = useGame();
+  const slots = getMatchupSlots(matchupId, currentMatchup);
+  const nameA = slots.kobe.nameZh;
+  const nameB = slots.lebron.nameZh;
+  const [stats] = useState<TopicStats>(() => getTopicStats(topicId, matchupId));
   const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const s = getTopicStats(topicId);
-    setStats(s);
     // Trigger animation on next frame so the transition actually fires
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setAnimating(true);
       });
     });
-  }, [topicId]);
+  }, []);
 
-  // Pre-mount: render nothing to avoid hydration mismatch
-  if (!mounted || !stats) return null;
-
-  const callout = getCallout(votedFor, stats, topicId);
+  const statScope = matchupId ? `${matchupId}:${topicId}` : topicId;
+  const callout = getCallout(votedFor, stats, statScope);
 
   const kobeWidth = animating ? stats.kobePercent : 0;
   const lebronWidth = animating ? stats.lebronPercent : 0;
 
   const isMinority =
     (votedFor === "kobe" ? stats.kobePercent : stats.lebronPercent) < 45;
+  const scopeLabel = matchupId ? "本对决投票" : "全球投票";
+  const votedName = votedFor === "kobe" ? nameA : nameB;
 
   return (
     <div
+      role="region"
+      aria-label={`${scopeLabel}结果`}
       className="w-full max-w-2xl mx-auto mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
       style={{ animation: "fade-up 0.4s ease-out" }}
     >
+      <p className="sr-only" aria-live="polite">
+        {scopeLabel}共 {stats.total} 票，{nameA} {stats.kobePercent}%，{nameB} {stats.lebronPercent}%。你的选择是{votedName}。
+      </p>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-bold text-white/40 tracking-wider uppercase">
-          🌍 全球投票
+          🌍 {scopeLabel}
         </span>
         <span className="text-xs text-white/30">
           {stats.total.toLocaleString()} 票
@@ -144,7 +148,7 @@ export default function VoteReveal({ topicId, votedFor }: VoteRevealProps) {
       </div>
 
       {/* Bar chart */}
-      <div className="relative w-full h-10 rounded-lg overflow-hidden bg-white/5 flex">
+      <div className="relative w-full h-10 rounded-lg overflow-hidden bg-white/5 flex" aria-hidden="true">
         {/* Kobe bar */}
         <div
           className="h-full flex items-center justify-start pl-2 transition-all ease-out"

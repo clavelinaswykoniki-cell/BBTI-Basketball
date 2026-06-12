@@ -1,10 +1,20 @@
 @AGENTS.md
 
-# Kobe vs LeBron — GOAT Debate
+# Kobe vs LeBron — BBTI / GOAT Debate
 
 ## Scope
-Interactive debate website: Kobe vs LeBron, pick-a-side PK format.
+Interactive debate website and basketball MBTI / BBTI result experience, pick-a-side PK format.
 Deploy target: Railway (web, not WeChat miniprogram).
+
+## Active BBTI Handoff
+Current product work is the BBTI layer. Do not rely on old chat context first; read:
+- `docs/BBTI_ADD_FILES_ROADMAP.md`
+- `docs/BBTI_FACT_RULES.md`
+- `docs/BBTI_VISUAL_QA.md`
+- `docs/BBTI_NEXT_PLAY_PANEL.md`
+- `docs/BBTI_TEAM_REVIEW.md`
+
+Football MBTI is a process reference only. Keep visible BBTI copy basketball-native.
 
 ## Current State (v0.3)
 - 12 main debate topics + 3 bonus "What If" hypothetical rounds

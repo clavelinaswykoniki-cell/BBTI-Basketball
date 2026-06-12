@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useGame } from "./GameProvider";
 import { quizQuestions, computeQuizCode, type QuizAnswers } from "@/data/basketball-quiz";
 
@@ -16,12 +16,6 @@ export default function BasketballQuiz() {
   const total = quizQuestions.length;
   const progress = ((current) / total) * 100;
 
-  // Reset multi-selection when question changes
-  useEffect(() => {
-    setMultiSelected([]);
-    setVisible(true);
-  }, [current]);
-
   function advance(newAnswers: QuizAnswers) {
     if (animating) return;
     setAnimating(true);
@@ -33,6 +27,8 @@ export default function BasketballQuiz() {
         submitQuiz(code);
       } else {
         setCurrent((c) => c + 1);
+        setMultiSelected([]);
+        setVisible(true);
         setAnimating(false);
       }
     }, 280);

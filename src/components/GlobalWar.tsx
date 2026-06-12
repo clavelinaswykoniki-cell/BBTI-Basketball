@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { getGlobalStats, type GlobalStats } from "@/lib/voteStats";
-import { useGame } from "./GameProvider";
 
 /**
  * Compact one-line banner showing the overall Kobe vs LeBron war status.
@@ -10,25 +9,7 @@ import { useGame } from "./GameProvider";
  * Reads from localStorage on mount — no props needed.
  */
 export default function GlobalWar() {
-  const { currentMatchup } = useGame();
-  const nameA = currentMatchup?.playerA.nameZh ?? "科比";
-  const nameB = currentMatchup?.playerB.nameZh ?? "詹姆斯";
-  const [mounted, setMounted] = useState(false);
-  const [stats, setStats] = useState<GlobalStats | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    setStats(getGlobalStats());
-  }, []);
-
-  // SSR / pre-mount: neutral skeleton to avoid hydration mismatch
-  if (!mounted || !stats) {
-    return (
-      <div className="w-full max-w-3xl mx-auto px-4 py-2">
-        <div className="h-8 rounded-full bg-white/5 animate-pulse" />
-      </div>
-    );
-  }
+  const [stats] = useState<GlobalStats>(() => getGlobalStats());
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-2">
@@ -42,7 +23,7 @@ export default function GlobalWar() {
           }}
         >
           <span className="text-[11px] sm:text-xs font-black text-white drop-shadow-md whitespace-nowrap">
-            {nameA}军团 {stats.kobePercent}%
+            科比军团 {stats.kobePercent}%
           </span>
         </div>
 
@@ -55,7 +36,7 @@ export default function GlobalWar() {
           }}
         >
           <span className="text-[11px] sm:text-xs font-black text-white drop-shadow-md whitespace-nowrap">
-            {stats.lebronPercent}% {nameB}军团
+            {stats.lebronPercent}% 詹姆斯军团
           </span>
         </div>
 
@@ -70,7 +51,7 @@ export default function GlobalWar() {
       {/* Total count */}
       <div className="text-center mt-1">
         <span className="text-[10px] text-white/25">
-          🌍 全球 {stats.total.toLocaleString()} 票
+          🌍 科詹主战场 {stats.total.toLocaleString()} 票
         </span>
       </div>
     </div>

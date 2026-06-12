@@ -97,26 +97,36 @@ function save(data: StoredData): void {
   }
 }
 
+function scopedTopicKey(topicId: string, matchupId?: string | null): string {
+  return matchupId ? `${matchupId}:${topicId}` : topicId;
+}
+
+function seededTopic(topicId: string): TopicVotes {
+  return BASELINE[topicId] ? { ...BASELINE[topicId] } : { kobe: 0, lebron: 0 };
+}
+
 // ── Public API ─────────────────────────────────────────────────────────
 
 /**
  * Record a vote for a topic.  Increments the count for the chosen side.
  */
-export function recordVote(topicId: string, winner: "kobe" | "lebron"): void {
+export function recordVote(topicId: string, winner: "kobe" | "lebron", matchupId?: string | null): void {
   const data = load();
-  if (!data.topics[topicId]) {
-    data.topics[topicId] = { kobe: 0, lebron: 0 };
+  const key = scopedTopicKey(topicId, matchupId);
+  if (!data.topics[key]) {
+    data.topics[key] = seededTopic(topicId);
   }
-  data.topics[topicId][winner] += 1;
+  data.topics[key][winner] += 1;
   save(data);
 }
 
 /**
  * Get the vote breakdown for a single topic.
  */
-export function getTopicStats(topicId: string): TopicStats {
+export function getTopicStats(topicId: string, matchupId?: string | null): TopicStats {
   const data = load();
-  const topic = data.topics[topicId] ?? { kobe: 0, lebron: 0 };
+  const key = scopedTopicKey(topicId, matchupId);
+  const topic = data.topics[key] ?? seededTopic(topicId);
   const total = topic.kobe + topic.lebron;
   return {
     kobeCount: topic.kobe,

@@ -24,10 +24,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "BBTI | 篮球人格测试",
   description:
-    "12 道灵魂拷问，揭示你的篮球人格类型。选科比还是詹姆斯？你的每个选择都在暴露你的真实性格。",
+    "12/30/50 道灵魂拷问，揭示你的篮球人格类型。选科比还是詹姆斯？你的每个选择都在暴露你的真实性格。",
   openGraph: {
     title: "BBTI | 篮球人格测试",
-    description: "12 道灵魂拷问，揭示你的篮球人格类型。选科比还是詹姆斯？你的每个选择都在暴露你的真实性格。",
+    description: "12/30/50 道灵魂拷问，揭示你的篮球人格类型。选科比还是詹姆斯？你的每个选择都在暴露你的真实性格。",
     type: "website",
   },
 };

@@ -5,9 +5,10 @@ import type { DebateTopic } from "@/data/debates";
 import { getMatchupById, type Matchup } from "@/data/matchups";
 import { getDebatesForMatchup, buildCustomMatchupId } from "@/data/debate-loader";
 import type { BbtiAnswer } from "@/data/bbti";
+import type { BbtiChallengeCaseContext } from "@/data/bbti-challenge-case";
 
 type Side = "kobe" | "lebron";
-type BbtiMode = "quick" | "full";
+type BbtiMode = "blitz" | "quick" | "full";
 
 type Phase =
   | "landing"
@@ -22,7 +23,8 @@ type Phase =
   | "quiz-result"
   | "bbti-entry"
   | "bbti-quiz"
-  | "bbti-result";
+  | "bbti-result"
+  | "bbti-compare";
 
 interface Vote {
   topicId: string;
@@ -38,10 +40,12 @@ interface GameState {
   kobeScore: number;
   lebronScore: number;
   gameStartTime: number | null;
+  elapsedSeconds: number;
   quizCode: string | null;
   bbtiMode: BbtiMode;
   bbtiCode: string | null;
   bbtiAnswers: BbtiAnswer[];
+  bbtiChallengeCase: BbtiChallengeCaseContext | null;
 }
 
 interface GameContextType extends GameState {
@@ -56,7 +60,7 @@ interface GameContextType extends GameState {
   startGame: () => void;
   startQuiz: () => void;
   submitQuiz: (code: string) => void;
-  selectMatchup: (id: string) => void;
+  selectMatchup: (id: string, caseContext?: BbtiChallengeCaseContext | null) => void;
   selectCustomMatchup: (playerAId: string, playerBId: string) => void;
   currentMatchup: Matchup | null;
   startBonus: () => void;
@@ -64,6 +68,8 @@ interface GameContextType extends GameState {
   backToMatchupSelect: () => void;
   elapsedSeconds: number;
   openBbtiEntry: () => void;
+  openBbtiCompare: () => void;
+  openBbtiResult: (code: string) => void;
   startBbti: (mode: BbtiMode) => void;
   submitBbti: (code: string, answers: BbtiAnswer[]) => void;
 }
@@ -86,10 +92,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     kobeScore: 0,
     lebronScore: 0,
     gameStartTime: null,
+    elapsedSeconds: 0,
     quizCode: null,
     bbtiMode: "quick",
     bbtiCode: null,
     bbtiAnswers: [],
+    bbtiChallengeCase: null,
   });
 
   const { main: debates, bonus: bonusDebates } = useMemo(
@@ -99,32 +107,63 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const allTopics = useMemo(() => [...debates, ...bonusDebates], [debates, bonusDebates]);
 
   const startGame = useCallback(() => {
-    setState((s) => ({ ...s, phase: "matchup-select" }));
+    setState((s) => ({ ...s, phase: "matchup-select", bbtiChallengeCase: null }));
   }, []);
 
   const startQuiz = useCallback(() => {
-    setState((s) => ({ ...s, phase: "quiz" }));
+    setState((s) => ({ ...s, phase: "quiz", bbtiChallengeCase: null }));
   }, []);
 
   const submitQuiz = useCallback((code: string) => {
-    setState((s) => ({ ...s, quizCode: code, phase: "quiz-result" }));
+    setState((s) => ({ ...s, quizCode: code, phase: "quiz-result", bbtiChallengeCase: null }));
   }, []);
 
-  const selectMatchup = useCallback((id: string) => {
+  const selectMatchup = useCallback((id: string, caseContext?: BbtiChallengeCaseContext | null) => {
     if (id === "custom") {
-      setState((s) => ({ ...s, phase: "custom-select" }));
+      setState((s) => ({ ...s, phase: "custom-select", bbtiChallengeCase: null }));
       return;
     }
-    setState((s) => ({ ...s, matchupId: id, phase: "pick" }));
+    setState((s) => ({
+      ...s,
+      matchupId: id,
+      side: null,
+      currentRound: 0,
+      votes: [],
+      kobeScore: 0,
+      lebronScore: 0,
+      gameStartTime: null,
+      elapsedSeconds: 0,
+      bbtiChallengeCase: caseContext?.challengeMatchupId === id ? caseContext : null,
+      phase: "pick",
+    }));
   }, []);
 
   const selectCustomMatchup = useCallback((playerAId: string, playerBId: string) => {
     const id = buildCustomMatchupId(playerAId, playerBId);
-    setState((s) => ({ ...s, matchupId: id, phase: "pick" }));
+    setState((s) => ({
+      ...s,
+      matchupId: id,
+      side: null,
+      currentRound: 0,
+      votes: [],
+      kobeScore: 0,
+      lebronScore: 0,
+      gameStartTime: null,
+      elapsedSeconds: 0,
+      bbtiChallengeCase: null,
+      phase: "pick",
+    }));
   }, []);
 
   const pickSide = useCallback((side: Side) => {
-    setState((s) => ({ ...s, side, phase: "battle", currentRound: 0, gameStartTime: Date.now() }));
+    setState((s) => ({
+      ...s,
+      side,
+      phase: "battle",
+      currentRound: 0,
+      gameStartTime: Date.now(),
+      elapsedSeconds: 0,
+    }));
   }, []);
 
   const vote = useCallback((winner: Side) => {
@@ -148,10 +187,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const all = [...d, ...bd];
       const next = s.currentRound + 1;
       if (s.phase === "battle" && next >= d.length) {
-        return { ...s, phase: bd.length > 0 ? "bonus-intro" : "result" as Phase };
+        return {
+          ...s,
+          phase: bd.length > 0 ? "bonus-intro" : "result" as Phase,
+          elapsedSeconds: bd.length > 0 || !s.gameStartTime
+            ? s.elapsedSeconds
+            : Math.round((Date.now() - s.gameStartTime) / 1000),
+        };
       }
       if (s.phase === "bonus" && next >= all.length) {
-        return { ...s, phase: "result" };
+        return {
+          ...s,
+          phase: "result",
+          elapsedSeconds: s.gameStartTime
+            ? Math.round((Date.now() - s.gameStartTime) / 1000)
+            : s.elapsedSeconds,
+        };
       }
       return { ...s, currentRound: next };
     });
@@ -165,7 +216,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const skipToResult = useCallback(() => {
-    setState((s) => ({ ...s, phase: "result" }));
+    setState((s) => ({
+      ...s,
+      phase: "result",
+      elapsedSeconds: s.gameStartTime
+        ? Math.round((Date.now() - s.gameStartTime) / 1000)
+        : s.elapsedSeconds,
+    }));
   }, []);
 
   const backToMatchupSelect = useCallback(() => {
@@ -178,6 +235,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       kobeScore: 0,
       lebronScore: 0,
       gameStartTime: null,
+      elapsedSeconds: 0,
+      bbtiChallengeCase: null,
     }));
   }, []);
 
@@ -191,23 +250,39 @@ export function GameProvider({ children }: { children: ReactNode }) {
       kobeScore: 0,
       lebronScore: 0,
       gameStartTime: null,
+      elapsedSeconds: 0,
       quizCode: null,
       bbtiMode: "quick",
       bbtiCode: null,
       bbtiAnswers: [],
+      bbtiChallengeCase: null,
     });
   }, []);
 
   const openBbtiEntry = useCallback(() => {
-    setState((s) => ({ ...s, phase: "bbti-entry" }));
+    setState((s) => ({ ...s, phase: "bbti-entry", bbtiChallengeCase: null }));
+  }, []);
+
+  const openBbtiCompare = useCallback(() => {
+    setState((s) => ({ ...s, phase: "bbti-compare", bbtiChallengeCase: null }));
+  }, []);
+
+  const openBbtiResult = useCallback((code: string) => {
+    setState((s) => ({
+      ...s,
+      bbtiCode: code,
+      bbtiAnswers: [],
+      bbtiChallengeCase: null,
+      phase: "bbti-result",
+    }));
   }, []);
 
   const startBbti = useCallback((mode: BbtiMode) => {
-    setState((s) => ({ ...s, bbtiMode: mode, phase: "bbti-quiz" }));
+    setState((s) => ({ ...s, bbtiMode: mode, phase: "bbti-quiz", bbtiChallengeCase: null }));
   }, []);
 
   const submitBbti = useCallback((code: string, answers: BbtiAnswer[]) => {
-    setState((s) => ({ ...s, bbtiCode: code, bbtiAnswers: answers, phase: "bbti-result" }));
+    setState((s) => ({ ...s, bbtiCode: code, bbtiAnswers: answers, phase: "bbti-result", bbtiChallengeCase: null }));
   }, []);
 
   const currentTopic = useMemo(() => {
@@ -218,7 +293,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const isBonus = state.phase === "bonus";
   const totalRounds = state.phase === "bonus" ? allTopics.length : debates.length;
-  const elapsedSeconds = state.gameStartTime ? Math.round((Date.now() - state.gameStartTime) / 1000) : 0;
 
   const currentMatchup = useMemo(
     () => (state.matchupId ? getMatchupById(state.matchupId) ?? null : null),
@@ -246,8 +320,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         startBonus,
         skipToResult,
         backToMatchupSelect,
-        elapsedSeconds,
         openBbtiEntry,
+        openBbtiCompare,
+        openBbtiResult,
         startBbti,
         submitBbti,
       }}

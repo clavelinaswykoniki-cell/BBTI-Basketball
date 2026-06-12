@@ -96,7 +96,6 @@ function buildDeepSeekPrompt(data: JudgeRequest): string {
   const loyalty = totalRounds > 0 ? loyaltyCount / totalRounds : 0;
   const loyaltyPct = Math.round(loyalty * 100);
   const sideName = side === "kobe" ? "科比" : "詹姆斯";
-  const otherName = side === "kobe" ? "詹姆斯" : "科比";
 
   // Build vote-by-vote breakdown
   const voteBreakdown = votes

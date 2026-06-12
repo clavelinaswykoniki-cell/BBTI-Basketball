@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BBTI Basketball
 
-## Getting Started
+BBTI Basketball is a Chinese interactive basketball personality test built around a Kobe vs LeBron debate flow. Users pick a side, vote through debate rounds, get a basketball MBTI-style profile, and receive a shareable roast/verdict card.
 
-First, run the development server:
+## Features
+
+- Pick-a-side Kobe vs LeBron debate experience.
+- 12 core debate rounds plus bonus "What If" rounds.
+- BBTI result profile with personality tags, contradictions, roast copy, and replay/share modules.
+- Template-based AI judge fallback that works without an API key.
+- Optional DeepSeek-powered judge via `DEEPSEEK_API_KEY`.
+- Railway-ready Next.js deployment config.
+
+## Tech Stack
+
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS v4
+
+## Local Development
+
+Requirements:
+
+- Node.js `>=20.9.0`
+- npm
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app works without environment variables because `/api/judge` falls back to a local template verdict.
 
-## Learn More
+To enable the LLM-backed judge:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env.local
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Then set:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+DEEPSEEK_API_KEY=your_deepseek_api_key
+```
 
-## Deploy on Vercel
+Never commit `.env.local`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Production Build
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+npm run start
+```
+
+## Deploy on Railway
+
+This repo includes `railway.toml`.
+
+Railway settings:
+
+- Build command: `npm run build`
+- Start command: `npm run start`
+- Health check path: `/`
+- Optional environment variable: `DEEPSEEK_API_KEY`
+
+If you connect this GitHub repo to Railway, Railway can deploy from the pushed branch. Without `DEEPSEEK_API_KEY`, the public site still runs with the built-in judge fallback.
+
+## Validation Commands
+
+Useful checks before publishing:
+
+```bash
+npm run lint
+npm run validate:bbti-fixtures
+npm run validate:bbti-challenge-pick-replay-kit
+npm run build -- --webpack
+```
+
+## Notes
+
+- This is a web app, not a WeChat mini program.
+- Vote/global counters are local/seeded unless a future backend is added.
+- The product copy is intentionally Chinese, basketball-native, and entertainment-focused.

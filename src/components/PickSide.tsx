@@ -1,12 +1,16 @@
 "use client";
 
 import { useGame } from "./GameProvider";
+import { getMatchupSlots } from "@/lib/matchupSlots";
+import BbtiChallengeCaseBanner from "./BbtiChallengeCaseBanner";
+import CourtAgenda from "./CourtAgenda";
 
 export default function PickSide() {
-  const { pickSide, currentMatchup, backToMatchupSelect } = useGame();
+  const { pickSide, currentMatchup, matchupId, bbtiChallengeCase, backToMatchupSelect } = useGame();
 
-  const pA = currentMatchup?.playerA ?? { name: "Kobe Bryant", nameZh: "科比", number: "#24", nickname: "Black Mamba" };
-  const pB = currentMatchup?.playerB ?? { name: "LeBron James", nameZh: "詹姆斯", number: "#23", nickname: "King James" };
+  const slots = getMatchupSlots(matchupId, currentMatchup);
+  const pA = slots.kobe;
+  const pB = slots.lebron;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 relative">
@@ -19,9 +23,17 @@ export default function PickSide() {
       <h2 className="text-2xl sm:text-4xl font-black mb-2 text-white text-center">
         先选一边站
       </h2>
-      <p className="text-white/50 mb-12 text-center">
+      <p className="text-white/50 mb-6 text-center">
         选完之后开始12道灵魂拷问
       </p>
+
+      <BbtiChallengeCaseBanner context={bbtiChallengeCase} />
+
+      <CourtAgenda
+        matchupId={matchupId}
+        nameA={pA.nameZh ?? pA.name}
+        nameB={pB.nameZh ?? pB.name}
+      />
 
       <div className="flex flex-col sm:flex-row gap-6 w-full max-w-3xl">
         <button
