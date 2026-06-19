@@ -62,6 +62,15 @@ npm run start
 
 This repo includes `railway.toml`.
 
+Current production:
+
+- GitHub: `https://github.com/clavelinaswykoniki-cell/BBTI-Basketball.git`
+- Public URL: https://bbti-web-production.up.railway.app/
+- Railway project/service: `hopeful-light` / `bbti-web`
+- 2026-06-19 release commit: `159b7a3` (`Ship basketball BBTI Railway-ready polish`)
+- 2026-06-19 Railway deployment: `db4ed7b3-05c1-4006-93b8-f7c2799115db`
+- Pre-release backup branch: `origin/backup/pre-basketball-current-push-20260619-153746`
+
 Railway settings:
 
 - Build command: `npm run build`
@@ -70,6 +79,21 @@ Railway settings:
 - Optional environment variable: `DEEPSEEK_API_KEY`
 
 If you connect this GitHub repo to Railway, Railway can deploy from the pushed branch. Without `DEEPSEEK_API_KEY`, the public site still runs with the built-in judge fallback.
+
+Rollback preference: preserve history. Test the backup branch first:
+
+```bash
+git switch -c rollback-test-basketball origin/backup/pre-basketball-current-push-20260619-153746
+```
+
+If production must be rolled back on `main`, prefer reverting the release commit and redeploying rather than force-pushing:
+
+```bash
+git switch main
+git revert 159b7a3
+git push origin main
+railway up --detach --message "Rollback basketball release"
+```
 
 ## Validation Commands
 

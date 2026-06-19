@@ -34,7 +34,7 @@ Football MBTI is a process reference only. Keep visible BBTI copy basketball-nat
 - Next.js 16 (App Router, Turbopack)
 - Tailwind CSS v4
 - TypeScript
-- Deploy: Railway (planned)
+- Deploy: Railway (active): https://bbti-web-production.up.railway.app/
 
 ## Commands
 ```bash
@@ -62,7 +62,7 @@ npm run build    # production build
 2. Live global vote counter → Upstash Redis + SSE (currently localStorage fake data)
 3. Radar chart data visualization (recharts)
 4. OG image generation for share cards (next/og)
-5. Railway deployment
+5. Railway deployment and public URL verification
 
 ## Constraints
 - No API keys in code — future DeepSeek key goes in `.env` only
