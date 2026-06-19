@@ -14,12 +14,18 @@ const FEATURED_LINKS = [
   { id: "curry-vs-durant", label: "杜库 · 王朝归因" },
 ];
 
-const BALLS = Array.from({ length: 10 }, (_, i) => ({
-  left: `${8 + i * 9}%`,
-  delay: `${i * 1.7}s`,
-  duration: `${10 + (i % 4) * 3}s`,
-  emoji: i % 3 === 0 ? "\u{1F3C0}" : i % 3 === 1 ? "⭐" : "\u{1F525}",
-}));
+const SCOUTING_STATS = [
+  { value: "12", label: "quick read" },
+  { value: "16", label: "BBTI types" },
+  { value: "08", label: "classic courts" },
+];
+
+const COURT_READS = [
+  { label: "最后一攻信仰", value: 92 },
+  { label: "体系最优解", value: 84 },
+  { label: "生涯叙事浓度", value: 78 },
+  { label: "建队工程偏好", value: 68 },
+];
 
 export default function Landing() {
   const { startGame, openBbtiEntry, selectMatchup } = useGame();
@@ -27,173 +33,150 @@ export default function Landing() {
   const heroTags = heroMatchup ? MATCHUP_TAGS[heroMatchup.id] : null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden">
-      {/* Background split */}
-      <div className="absolute inset-0 flex">
-        <div className="w-1/2 bg-gradient-to-br from-[#552583]/30 to-[#552583]/10" />
-        <div className="w-1/2 bg-gradient-to-bl from-[#860038]/30 to-[#860038]/10" />
-      </div>
+    <main className="relative min-h-screen overflow-hidden bg-background text-white">
+      <div className="bbti-arena-bg pointer-events-none" />
+      <div className="bbti-court-lines pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,10,10,.96),rgba(10,10,10,.58)_52%,rgba(10,10,10,.92))]" />
 
-      {/* Floating basketball emojis */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {BALLS.map((b, i) => (
-          <span
-            key={i}
-            className="floating-ball"
-            style={{
-              left: b.left,
-              animationDelay: b.delay,
-              animationDuration: b.duration,
-            }}
-          >
-            {b.emoji}
-          </span>
-        ))}
-      </div>
+      <section className="relative z-10 flex min-h-screen flex-col px-5 py-5 sm:px-8 lg:px-12">
+        <nav className="flex items-center justify-between gap-4 border-b border-white/10 pb-4 text-[10px] font-black uppercase tracking-[0.24em] text-white/45">
+          <span className="text-white/70">BBTI</span>
+          <span className="hidden sm:inline text-kobe-gold/80">Basketball Brain Type Indicator</span>
+          <span className="rounded-full border border-kobe-gold/25 bg-kobe-gold/10 px-3 py-1 text-kobe-gold">Season 01</span>
+        </nav>
 
-      <div className="relative z-10 text-center w-full max-w-4xl">
-        <div
-          className="inline-flex items-center gap-2 rounded-full border border-kobe-gold/25 bg-black/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-kobe-gold mb-4"
-          style={{ animation: "fade-up 0.65s ease-out" }}
-        >
-          <span>NBA 人格审判</span>
-          <span className="text-white/20">/</span>
-          <span>Season 01</span>
-        </div>
+        <div className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)]">
+          <div className="max-w-4xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-kobe-gold/25 bg-black/28 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-kobe-gold backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-kobe-gold shadow-[0_0_18px_rgba(253,185,39,.8)]" />
+              Arena Scouting Report
+            </div>
 
-        <h1
-          className="text-5xl sm:text-7xl font-black mb-2 bg-gradient-to-r from-kobe-gold via-white to-lebron-gold bg-clip-text text-transparent"
-          style={{ animation: "fade-up 0.8s ease-out" }}
-        >
-          篮球 MBTI
-        </h1>
-        <p
-          className="text-lg sm:text-xl text-white/60 mb-6 tracking-wide"
-          style={{ animation: "fade-up 1s ease-out" }}
-        >
-          Basketball Brain Type Indicator
-        </p>
+            <h1 className="max-w-4xl text-5xl font-black leading-[0.94] tracking-tight sm:text-7xl lg:text-8xl">
+              篮球 MBTI
+              <span className="block bg-gradient-to-r from-kobe-gold via-white to-lebron-gold bg-clip-text text-transparent">
+                球迷人格开场
+              </span>
+            </h1>
 
-        <p
-          className="text-lg sm:text-xl text-white/60 mb-2"
-          style={{ animation: "fade-up 1s ease-out" }}
-        >
-          12/30/50 道选择题，揭示你的篮球人格
-        </p>
-        <p className="text-sm text-white/40 mb-2">
-          8组经典对决 · 16种BBTI类型 · AI人格分析
-        </p>
-        <p className="text-xs text-white/25 mb-10">
-          科比vs詹姆斯 · 科比vs乔丹 · 詹姆斯vs乔丹 · 魔术师vs大鸟 · 库里vs杜兰特 · 奥尼尔vs姚明 · 邓肯vs加内特 · 艾弗森vs麦迪
-        </p>
+            <p className="mt-6 max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
+              用经典球星对决和 BBTI 题组，把你的篮球判断拆成性格画像：
+              你相信最后一攻、体系篮球、历史地位，还是长期建队工程。
+            </p>
 
-        <div
-          className="flex flex-col sm:flex-row items-center gap-3 justify-center"
-          style={{ animation: "fade-up 1.2s ease-out" }}
-        >
-          <button
-            onClick={() => selectMatchup(HERO_MATCHUP_ID)}
-            className="px-8 py-4 min-h-[48px] bg-kobe-gold text-black text-lg font-black rounded-full
-              hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-          >
-            科詹 GOAT 法庭
-          </button>
-          <button
-            onClick={openBbtiEntry}
-            className="px-10 py-4 min-h-[48px] bg-gradient-to-r from-kobe-purple to-lebron-wine text-white text-xl font-bold rounded-full
-              hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-            style={{ animation: "pulse-glow 2s ease-in-out infinite" }}
-          >
-            🧠 开始 BBTI 测试
-          </button>
-          <button
-            onClick={() => selectMatchup("custom")}
-            className="px-8 py-4 min-h-[48px] border-2 border-white/20 hover:border-white/50 text-white/70 hover:text-white text-lg font-bold rounded-full
-              hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-          >
-            自选两位球星
-          </button>
-        </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={openBbtiEntry}
+                className="min-h-[48px] rounded-full bg-kobe-gold px-8 py-4 text-sm font-black text-black shadow-[0_18px_60px_rgba(253,185,39,.2)] transition hover:-translate-y-0.5 hover:bg-lebron-gold active:scale-[0.98] cursor-pointer"
+              >
+                开始 BBTI 测试
+              </button>
+              <button
+                onClick={() => selectMatchup(HERO_MATCHUP_ID)}
+                className="min-h-[48px] rounded-full border border-white/18 bg-white/[0.08] px-8 py-4 text-sm font-black text-white backdrop-blur transition hover:border-kobe-gold/50 hover:bg-white/[0.12] active:scale-[0.98] cursor-pointer"
+              >
+                科詹 GOAT 法庭
+              </button>
+              <button
+                onClick={() => selectMatchup("custom")}
+                className="min-h-[48px] rounded-full border border-lebron-gold/25 bg-lebron-wine/20 px-8 py-4 text-sm font-black text-lebron-gold backdrop-blur transition hover:border-lebron-gold/55 hover:bg-lebron-wine/30 active:scale-[0.98] cursor-pointer"
+              >
+                自选两位球星
+              </button>
+            </div>
 
-        <div
-          className="mt-8 w-full rounded-2xl border border-kobe-gold/25 bg-white/[0.04] p-4 sm:p-5 text-left"
-          style={{ animation: "fade-up 1.35s ease-out" }}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="rounded-full bg-kobe-gold px-2.5 py-1 text-[10px] font-black text-black">
-                  FEATURED CLASH
-                </span>
-                <span className="text-[10px] font-black text-white/35 tracking-[0.2em] uppercase">
-                  {heroTags?.heat ?? "99 HEAT"}
-                </span>
-                <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold text-white/45">
-                  {heroTags?.lane ?? "GOAT 法庭"}
-                </span>
+            <div className="mt-8 grid max-w-2xl grid-cols-3 gap-2">
+              {SCOUTING_STATS.map((item) => (
+                <div key={item.label} className="border border-white/10 bg-black/30 px-3 py-3 backdrop-blur-sm">
+                  <div className="text-2xl font-black leading-none text-white sm:text-3xl">{item.value}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white/42">{item.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-9 flex flex-wrap gap-2">
+              {FEATURED_LINKS.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => item.id === "matchup-select" ? startGame() : selectMatchup(item.id)}
+                  className="rounded-full border border-white/[0.12] bg-black/28 px-3.5 py-2 text-xs font-bold text-white/58 backdrop-blur transition hover:border-kobe-gold/45 hover:text-kobe-gold cursor-pointer"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <aside className="bbti-broadcast-panel p-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <span className="text-[10px] font-black uppercase tracking-[0.28em] text-white/38">Live Scouting</span>
+              <span className="bbti-shot-clock rounded-full px-2.5 py-1 text-[10px] font-black text-black">Q4 00.8</span>
+            </div>
+
+            <div className="py-7">
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="bg-kobe-gold px-2.5 py-1 text-[10px] font-black text-black">FEATURED CLASH</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">{heroTags?.heat ?? "99 HEAT"}</span>
+                <span className="border border-white/10 px-2.5 py-1 text-[10px] font-bold text-white/45">{heroTags?.lane ?? "GOAT 法庭"}</span>
               </div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl sm:text-4xl font-black text-kobe-gold tracking-tighter text-glow">
-                  {heroMatchup?.playerA.number ?? "#24"}
-                </span>
-                <span className="text-lg font-black text-white/30">VS</span>
-                <span className="text-3xl sm:text-4xl font-black text-lebron-gold tracking-tighter text-glow">
-                  {heroMatchup?.playerB.number ?? "#23"}
-                </span>
+
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                <div>
+                  <div className="text-6xl font-black leading-none text-kobe-gold">{heroMatchup?.playerA.number ?? "#24"}</div>
+                  <div className="mt-2 text-xl font-black">{heroMatchup?.playerA.nameZh ?? "科比"}</div>
+                  <div className="text-xs text-white/42">{heroMatchup?.playerA.nickname ?? "Black Mamba"}</div>
+                </div>
+                <div className="rounded-full border border-white/15 bg-white/[0.08] px-3 py-2 text-lg font-black text-white/70">VS</div>
+                <div className="text-right">
+                  <div className="text-6xl font-black leading-none text-lebron-gold">{heroMatchup?.playerB.number ?? "#23"}</div>
+                  <div className="mt-2 text-xl font-black">{heroMatchup?.playerB.nameZh ?? "詹姆斯"}</div>
+                  <div className="text-xs text-white/42">{heroMatchup?.playerB.nickname ?? "King James"}</div>
+                </div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white mb-1">
-                {heroMatchup?.title ?? "科比 vs 詹姆斯"}：英雄球和全能系统的终极审判
-              </h2>
-              <p className="text-sm text-white/50 leading-relaxed">
+
+              <p className="mt-6 text-sm leading-6 text-white/58">
                 {heroTags?.advisor ?? "这局会暴露你到底相信最后一攻、忠诚叙事，还是相信最优解、长期统治和建队工程。"}
               </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
+
+              <div className="mt-5 flex flex-wrap gap-1.5">
                 {(heroTags?.axes ?? ["英雄球", "忠诚/冠军", "Eye Test"]).map((axis) => (
-                  <span
-                    key={axis}
-                    className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-bold text-white/45"
-                  >
+                  <span key={axis} className="border border-white/10 bg-black/24 px-2.5 py-1 text-[10px] font-bold text-white/48">
                     {axis}
                   </span>
                 ))}
               </div>
+
+              <div className="mt-6 space-y-2">
+                {COURT_READS.map((item) => (
+                  <div key={item.label} className="grid grid-cols-[108px_1fr_auto] items-center gap-3 text-xs">
+                    <span className="font-bold text-white/48">{item.label}</span>
+                    <span className="h-1.5 overflow-hidden bg-white/10">
+                      <span
+                        className="block h-full bg-gradient-to-r from-kobe-gold to-lebron-gold"
+                        style={{ width: `${item.value}%` }}
+                      />
+                    </span>
+                    <span className="font-black text-white/62">{item.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
             <button
               onClick={() => selectMatchup(HERO_MATCHUP_ID)}
-              className="shrink-0 rounded-xl bg-gradient-to-r from-kobe-gold to-lebron-gold px-5 py-3 text-sm font-black text-black hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+              className="w-full border border-white/10 bg-gradient-to-r from-kobe-gold to-lebron-gold px-5 py-4 text-sm font-black text-black transition hover:brightness-110 cursor-pointer"
             >
-              直接开庭
+              直接进入科詹对决
             </button>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {FEATURED_LINKS.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => item.id === "matchup-select" ? startGame() : selectMatchup(item.id)}
-                className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/55 hover:border-kobe-gold/45 hover:text-kobe-gold transition-colors cursor-pointer"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+          </aside>
         </div>
 
-        <p className="mt-6 text-xs text-white/30">
-          你的选择暴露你的性格，每位球迷都是独一无二的
-        </p>
-
-        {/* Scroll indicator */}
-        <div
-          className="mt-6 flex flex-col items-center text-white/20"
-          style={{ animation: "bounce-down 2s ease-in-out infinite" }}
-        >
-          <span className="text-xs mb-1">向下滑动</span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-40">
-            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+        <div className="grid gap-2 border-y border-white/10 bg-black/24 py-3 text-xs font-bold text-white/42 backdrop-blur sm:grid-cols-3">
+          <span>人格测试 · 快速版和完整版</span>
+          <span>经典法庭 · 8 组球星争议</span>
+          <span>AI 分析 · 娱乐向篮球画像</span>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

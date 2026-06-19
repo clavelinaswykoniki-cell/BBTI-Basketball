@@ -67,6 +67,65 @@ body::before {
   pointer-events: none;
 }
 
+.bbti-arena-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(112deg, rgba(85, 37, 131, 0.34), transparent 42%),
+    linear-gradient(246deg, rgba(134, 0, 56, 0.30), transparent 45%),
+    linear-gradient(180deg, rgba(253, 185, 39, 0.10), transparent 34%, rgba(10, 10, 10, 0.82)),
+    repeating-linear-gradient(0deg, transparent 0 42px, rgba(255, 255, 255, 0.025) 43px 44px),
+    #0a0a0a;
+}
+
+.bbti-court-lines {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background:
+    linear-gradient(90deg, transparent 0%, transparent 49.7%, rgba(255, 255, 255, 0.24) 49.8%, rgba(255, 255, 255, 0.24) 50.2%, transparent 50.3%),
+    radial-gradient(ellipse at center, transparent 0%, transparent 17%, rgba(255, 255, 255, 0.24) 17.2%, rgba(255, 255, 255, 0.24) 17.8%, transparent 18%),
+    linear-gradient(rgba(255, 255, 255, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.11) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 68px 68px, 68px 68px;
+  mask-image: linear-gradient(to bottom, transparent, black 16%, black 78%, transparent);
+}
+
+.bbti-broadcast-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
+    rgba(10, 10, 10, 0.66);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.bbti-broadcast-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 18px, 18px 100%;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.bbti-broadcast-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.bbti-shot-clock {
+  background: linear-gradient(90deg, var(--kobe-gold), var(--lebron-gold));
+  box-shadow: 0 0 26px rgba(253, 185, 39, 0.28);
+}
+
 @keyframes bg-drift {
   0%, 100% { background-position: 0% 0%; }
   25% { background-position: 100% 50%; }

@@ -7,8 +7,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build && mkdir -p .next/standalone/.next && cp -R public .next/standalone/ && cp -R .next/static .next/standalone/.next/",
+    "start": "HOSTNAME=0.0.0.0 PORT=${PORT:-3000} node .next/standalone/server.js",
     "lint": "eslint",
     "render:bbti-visual-qa": "node scripts/render-bbti-visual-qa-fixtures.mjs",
     "validate:bbti-visual-qa-fixtures": "node scripts/render-bbti-visual-qa-fixtures.mjs",
